@@ -1,4 +1,4 @@
-# 🎙️ **EchoSense AI**
+# 🎙️ **TrueTone**
 
 **AI-Powered Voice Survey & Feedback Platform**
 
