@@ -1,0 +1,129 @@
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+
+
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  users     User[]
+  surveys   Survey[]
+  
+}
+
+
+model User {
+  id           String   @id @default(cuid())
+  orgId        String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(OWNER)
+  createdAt    DateTime @default(now())
+  organization Organization @relation(fields: [orgId], references: [id])
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+
+enum SurveyStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model Survey {
+  id                   String       @id @default(cuid())
+  orgId                String
+  title                String
+  subtitle             String?
+  slug                 String       @unique
+  voiceDurationLimitSec Int         @default(120)
+  theme                Json?
+  textFeedbackEnabled  Boolean      @default(false)
+  status               SurveyStatus @default(DRAFT)
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  organization         Organization @relation(fields: [orgId], references: [id])
+  responses            SurveyResponse[]
+}
+
+
+model SurveyResponse {
+  id              String   @id @default(cuid())
+  surveyId        String
+  respondentMeta  Json?
+  textFeedback    String?
+  durationSec     Int?
+  status          ResponseStatus @default(PENDING)
+  createdAt       DateTime @default(now())
+  survey          Survey        @relation(fields: [surveyId], references: [id])
+  attachment      ResponseAttachment?
+  transcript      Transcript?
+  insight         AIInsight?
+}
+
+enum ResponseStatus {
+  PENDING
+  PROCESSED
+  FAILED
+}
+
+model ResponseAttachment {
+  id         String @id @default(cuid())
+  responseId String @unique
+  storageKey String
+  mimeType   String
+  sizeBytes  Int
+  r2Url      String
+  response   SurveyResponse @relation(fields: [responseId], references: [id])
+}
+
+model Transcript {
+  id         String   @id @default(cuid())
+  responseId String   @unique
+  text       String
+  language   String?
+  confidence Float?
+  createdAt  DateTime @default(now())
+  response   SurveyResponse @relation(fields: [responseId], references: [id])
+}
+
+model AIInsight {
+  id             String   @id @default(cuid())
+  responseId     String   @unique
+  summary        String
+  sentiment      Sentiment @default(NEUTRAL)
+  urgency        Urgency   @default(LOW)
+  tags           String[]
+  rawModelOutput Json?
+  createdAt      DateTime  @default(now())
+  response       SurveyResponse @relation(fields: [responseId], references: [id])
+}
+
+enum Sentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+  MIXED
+}
+
+enum Urgency {
+  LOW
+  MEDIUM
+  HIGH
+}

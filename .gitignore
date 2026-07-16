@@ -1,0 +1,26 @@
+.env
+.env.example
+.env.dev
+node_modules
+
+# Prisma generated client
+server/generated/
+
+# Build output
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
