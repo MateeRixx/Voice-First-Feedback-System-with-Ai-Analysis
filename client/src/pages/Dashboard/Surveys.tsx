@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react"
+import { useNavigate } from "react-router-dom"
 import { api, type Survey } from "@/lib/api"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -15,7 +16,6 @@ import {
   Clock,
   CalendarDays,
   Eye,
-  ExternalLink,
   Loader2,
   Globe,
   GlobeOff,
@@ -40,6 +40,7 @@ function formatTime(iso: string) {
 }
 
 export default function Surveys() {
+  const navigate = useNavigate()
   const [surveys, setSurveys] = useState<Survey[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
@@ -178,11 +179,11 @@ export default function Surveys() {
                 </div>
                 <Separator className="my-3" />
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => toast.success("Response management coming soon")}>
+                  <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => navigate(`/dashboard/surveys/${survey.id}/responses`)}>
                     <Eye className="h-3.5 w-3.5" />
                     Responses
                   </Button>
-                  <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => toast.success("Analytics coming soon")}>
+                  <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => navigate("/dashboard/analytics")}>
                     <BarChart3 className="h-3.5 w-3.5" />
                     Analytics
                   </Button>

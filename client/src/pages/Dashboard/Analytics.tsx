@@ -1,191 +1,285 @@
+import { useState, useEffect } from "react"
+import { api, type Survey } from "@/lib/api"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { toast } from "@/components/ui/toast"
 import {
   TrendingUp,
-  ArrowUpRight,
-  Download,
+  Lightbulb,
   Smile,
   Meh,
   Frown,
-  AlertTriangle,
-  Lightbulb,
+  Brain,
+  Loader2,
+  AlertCircle,
 } from "lucide-react"
 
-const sentimentData = [
-  { label: "Positive", value: 58, color: "bg-emerald-500", icon: Smile },
-  { label: "Neutral", value: 27, color: "bg-amber-500", icon: Meh },
-  { label: "Negative", value: 15, color: "bg-red-500", icon: Frown },
-]
+type Analysis = {
+  totalResponses: number
+  summary: string
+  sentimentBreakdown: Record<string, number>
+  topTags: string[]
+  commonThemes: string[]
+  recommendations: string[]
+}
 
-const insights = [
-  {
-    type: "theme",
-    icon: Lightbulb,
-    title: "UI/UX improvements requested",
-    description: "22 respondents mentioned navigation difficulties in the dashboard",
-    frequency: "22 mentions",
-    trend: "+8%",
-  },
-  {
-    type: "alert",
-    icon: AlertTriangle,
-    title: "Response time concerns",
-    description: "15 respondents reported dissatisfaction with support response times",
-    frequency: "15 mentions",
-    trend: "+12%",
-  },
-  {
-    type: "positive",
-    icon: TrendingUp,
-    title: "Feature adoption growing",
-    description: "Positive feedback about the new analytics dashboard feature",
-    frequency: "31 mentions",
-    trend: "+25%",
-  },
-]
+const sentimentIcons: Record<string, typeof Smile> = {
+  POSITIVE: Smile,
+  NEUTRAL: Meh,
+  NEGATIVE: Frown,
+  MIXED: Meh,
+}
 
-const recentActivity = [
-  {
-    survey: "Product Feedback Q3",
-    sentiment: "positive" as const,
-    text: "The new search feature is exactly what we needed, works great!",
-    time: "5 min ago",
-  },
-  {
-    survey: "Customer Support",
-    sentiment: "negative" as const,
-    text: "Response times have been getting worse over the past month...",
-    time: "23 min ago",
-  },
-  {
-    survey: "Employee Engagement",
-    sentiment: "mixed" as const,
-    text: "Remote work policy is good but we need better async communication tools",
-    time: "1 hr ago",
-  },
-]
+const sentimentColors: Record<string, string> = {
+  POSITIVE: "bg-emerald-500",
+  NEUTRAL: "bg-amber-500",
+  NEGATIVE: "bg-red-500",
+  MIXED: "bg-purple-500",
+}
 
 export default function Analytics() {
+  const [surveys, setSurveys] = useState<Survey[]>([])
+  const [selectedId, setSelectedId] = useState("")
+  const [analysis, setAnalysis] = useState<Analysis | null>(null)
+  const [analyzing, setAnalyzing] = useState(false)
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    api.surveys.list()
+      .then((r) => {
+        setSurveys(r.surveys)
+        if (r.surveys.length > 0) setSelectedId(r.surveys[0].id)
+      })
+      .catch(() => toast.error("Failed to load surveys"))
+  }, [])
+
+  async function handleAnalyze() {
+    if (!selectedId) return
+    setAnalyzing(true)
+    setError("")
+    setAnalysis(null)
+    try {
+      const res = await api.surveys.getSurveyAnalysis(selectedId)
+      setAnalysis(res.analysis)
+      toast.success("Analysis complete")
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Analysis failed"
+      setError(msg)
+      toast.error(msg)
+    } finally {
+      setAnalyzing(false)
+    }
+  }
+
+  const totalSentiment = analysis?.sentimentBreakdown
+    ? Object.values(analysis.sentimentBreakdown).reduce((a, b) => a + (b ?? 0), 0) || 1
+    : 1
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Survey Analysis</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            AI-powered insights across all your surveys.
+            AI-powered insights for each survey.
           </p>
         </div>
-        <Button variant="outline" size="sm" className="gap-2">
-          <Download className="h-4 w-4" />
-          Export
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <select
+          value={selectedId}
+          onChange={(e) => { setSelectedId(e.target.value); setAnalysis(null); setError("") }}
+          className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        >
+          {surveys.map((s) => (
+            <option key={s.id} value={s.id}>{s.title}</option>
+          ))}
+        </select>
+        <Button
+          variant="secondary"
+          size="sm"
+          className="gap-1.5"
+          disabled={analyzing || !selectedId}
+          onClick={handleAnalyze}
+        >
+          {analyzing ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Brain className="h-4 w-4" />
+          )}
+          {analyzing ? "Generating Report..." : "Run AI Analysis"}
         </Button>
       </div>
 
-      {/* Sentiment Distribution */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Sentiment Distribution</CardTitle>
-          <CardDescription>Overall sentiment across all responses this period</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-3">
-            {sentimentData.map((s) => {
-              const Icon = s.icon
-              return (
-                <div key={s.label} className="flex-1 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Icon className="h-4 w-4" />
-                    <span className="text-sm font-medium">{s.label}</span>
-                    <span className="text-sm font-bold ml-auto">{s.value}%</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${s.color} transition-all`}
-                      style={{ width: `${s.value}%` }}
-                    />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
+      {analyzing && (
+        <Card className="py-16">
+          <CardContent className="flex flex-col items-center text-center gap-4">
+            <div className="relative">
+              <div className="absolute inset-0 animate-ping rounded-full bg-primary/20" />
+              <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                <Loader2 className="h-7 w-7 animate-spin text-primary" />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <CardTitle className="text-lg">Generating Report</CardTitle>
+              <CardDescription>
+                Analyzing {surveys.find((s) => s.id === selectedId)?.title ?? "survey"} responses...
+              </CardDescription>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* AI Insights */}
-      <div className="grid gap-4 md:grid-cols-3">
-        {insights.map((insight) => {
-          const Icon = insight.icon
-          return (
-            <Card key={insight.title} className="group cursor-pointer transition-shadow hover:shadow-md">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className={`rounded-lg p-2 ${
-                    insight.type === "theme"
-                      ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
-                      : insight.type === "alert"
-                      ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                      : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                  }`}>
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <Badge variant="secondary" className="text-xs">
-                    {insight.frequency}
-                  </Badge>
-                </div>
-                <CardTitle className="text-sm mt-3">{insight.title}</CardTitle>
-                <CardDescription className="text-xs">
-                  {insight.description}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-1 text-xs text-emerald-500 font-medium">
-                  <ArrowUpRight className="h-3 w-3" />
-                  {insight.trend} vs last period
-                </div>
+      {error && !analyzing && (
+        <Card className="py-12 border-destructive/50">
+          <CardContent className="flex flex-col items-center text-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+              <AlertCircle className="h-6 w-6 text-destructive" />
+            </div>
+            <CardDescription className="text-destructive max-w-md">{error}</CardDescription>
+            <Button variant="outline" size="sm" onClick={handleAnalyze}>Retry</Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {!analyzing && !error && !analysis && (
+        <Card className="py-12">
+          <CardContent className="flex flex-col items-center text-center">
+            <div className="rounded-full bg-primary/10 p-3 mb-4">
+              <Brain className="h-6 w-6 text-primary" />
+            </div>
+            <CardTitle className="text-lg">No analysis yet</CardTitle>
+            <CardDescription className="mt-1 max-w-sm">
+              Process some responses first, then run AI analysis on this survey.
+            </CardDescription>
+          </CardContent>
+        </Card>
+      )}
+
+      {!analyzing && analysis && (
+        <>
+          {analysis.totalResponses === 0 ? (
+            <Card className="py-12">
+              <CardContent className="flex flex-col items-center text-center">
+                <CardDescription>No processed responses to analyze.</CardDescription>
               </CardContent>
             </Card>
-          )
-        })}
-      </div>
+          ) : (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4" />
+                    Executive Summary
+                  </CardTitle>
+                  <CardDescription>
+                    Based on {analysis.totalResponses} processed response{analysis.totalResponses !== 1 ? "s" : ""}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    {analysis.summary || "No summary available."}
+                  </p>
+                </CardContent>
+              </Card>
 
-      {/* Recent Activity Feed */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Recent Activity</CardTitle>
-          <CardDescription>Latest responses with AI analysis</CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="divide-y">
-            {recentActivity.map((item, i) => (
-              <div
-                key={i}
-                className="flex items-start gap-4 p-4 hover:bg-muted/50 cursor-pointer transition-colors"
-              >
-                <div className={`mt-0.5 ${
-                  item.sentiment === "positive" ? "text-emerald-500"
-                  : item.sentiment === "negative" ? "text-red-500"
-                  : "text-amber-500"
-                }`}>
-                  {item.sentiment === "positive" ? <Smile className="h-5 w-5" />
-                    : item.sentiment === "negative" ? <Frown className="h-5 w-5" />
-                    : <Meh className="h-5 w-5" />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">{item.survey}</span>
-                    <Badge variant="secondary" className="text-xs capitalize">
-                      {item.sentiment}
-                    </Badge>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Sentiment Breakdown</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-3">
+                    {Object.entries(analysis.sentimentBreakdown || {}).map(([key, value]) => {
+                      const Icon = sentimentIcons[key] ?? Meh
+                      const pct = Math.round((value / totalSentiment) * 100)
+                      return (
+                        <div key={key} className="flex-1 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Icon className="h-4 w-4" />
+                            <span className="text-sm font-medium capitalize">{key.toLowerCase()}</span>
+                            <span className="text-sm font-bold ml-auto">{pct}%</span>
+                          </div>
+                          <div className="h-2 rounded-full bg-muted overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${sentimentColors[key] ?? "bg-primary"} transition-all`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
-                  <p className="mt-1 text-sm text-muted-foreground line-clamp-1">{item.text}</p>
-                  <span className="mt-1 text-xs text-muted-foreground">{item.time}</span>
-                </div>
+                </CardContent>
+              </Card>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Lightbulb className="h-4 w-4" />
+                      Common Themes
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {(analysis.commonThemes ?? []).length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No themes identified.</p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {analysis.commonThemes.map((theme, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm">
+                            <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                            {theme}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Brain className="h-4 w-4" />
+                      Recommendations
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {(analysis.recommendations ?? []).length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No recommendations yet.</p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {analysis.recommendations.map((rec, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm">
+                            <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
+                            {rec}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+
+              {(analysis.topTags ?? []).length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Top Tags</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {analysis.topTags.map((tag) => (
+                        <Badge key={tag} variant="secondary">{tag}</Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          )}
+        </>
+      )}
     </div>
   )
 }

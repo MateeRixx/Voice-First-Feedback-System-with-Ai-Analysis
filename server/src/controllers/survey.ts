@@ -1,4 +1,6 @@
 import { prisma } from "../lib/prisma";
+import { processResponse } from "../lib/process-response";
+import { analyzeSurvey } from "../lib/analyze-survey";
 import type { Request, Response } from "express";
 
 export async function list(req: Request, res: Response) {
@@ -34,7 +36,7 @@ export async function getById(req: Request, res: Response) {
 export async function create(req: Request, res: Response) {
   try {
     const orgId = req.user!.orgId;
-    const { title, subtitle, voiceDurationLimitSec, textFeedbackEnabled } = req.body;
+    const { title, subtitle, voiceDurationLimitSec, textFeedbackEnabled, theme } = req.body;
 
     if (!title) return res.status(400).json({ error: "Title is required" });
 
@@ -51,6 +53,7 @@ export async function create(req: Request, res: Response) {
         slug,
         voiceDurationLimitSec: voiceDurationLimitSec || 120,
         textFeedbackEnabled: textFeedbackEnabled ?? false,
+        ...(theme !== undefined && { theme }),
       },
     });
 
@@ -120,5 +123,91 @@ export async function unpublishSurvey(req: Request, res: Response) {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to unpublish survey" });
+  }
+}
+
+export async function listResponses(req: Request, res: Response) {
+  try {
+    const orgId = req.user!.orgId;
+    const { surveyId } = req.params;
+
+    const survey = await prisma.survey.findFirst({ where: { id: surveyId, orgId } });
+    if (!survey) return res.status(404).json({ error: "Survey not found" });
+
+    const responses = await prisma.surveyResponse.findMany({
+      where: { surveyId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        attachment: true,
+        transcript: true,
+        insight: true,
+      },
+    });
+
+    res.json({ responses });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to fetch responses" });
+  }
+}
+
+export async function processSingleResponse(req: Request, res: Response) {
+  try {
+    const orgId = req.user!.orgId;
+    const { surveyId, responseId } = req.params;
+
+    const survey = await prisma.survey.findFirst({ where: { id: surveyId, orgId } });
+    if (!survey) return res.status(404).json({ error: "Survey not found" });
+
+    const response = await prisma.surveyResponse.findFirst({
+      where: { id: responseId, surveyId },
+    });
+    if (!response) return res.status(404).json({ error: "Response not found" });
+
+    await processResponse(responseId);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error instanceof Error ? error.message : "Failed to process response" });
+  }
+}
+
+export async function getSurveyAnalysis(req: Request, res: Response) {
+  try {
+    const orgId = req.user!.orgId;
+    const { surveyId } = req.params;
+
+    const survey = await prisma.survey.findFirst({ where: { id: surveyId, orgId } });
+    if (!survey) return res.status(404).json({ error: "Survey not found" });
+
+    const analysis = await analyzeSurvey(surveyId);
+
+    res.json({ analysis });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error instanceof Error ? error.message : "Failed to analyze survey" });
+  }
+}
+
+export async function deleteResponse(req: Request, res: Response) {
+  try {
+    const orgId = req.user!.orgId;
+    const { surveyId, responseId } = req.params;
+
+    const survey = await prisma.survey.findFirst({ where: { id: surveyId, orgId } });
+    if (!survey) return res.status(404).json({ error: "Survey not found" });
+
+    const existing = await prisma.surveyResponse.findFirst({
+      where: { id: responseId, surveyId },
+    });
+    if (!existing) return res.status(404).json({ error: "Response not found" });
+
+    await prisma.surveyResponse.delete({ where: { id: responseId } });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to delete response" });
   }
 }

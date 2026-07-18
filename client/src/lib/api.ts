@@ -2,8 +2,9 @@ const API_BASE = "http://127.0.0.1:3000/api"
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = localStorage.getItem("truetone-token")
+  const hasBody = options?.body !== undefined && options.body !== null
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    ...(hasBody ? { "Content-Type": "application/json" } : {}),
     ...(options?.headers as Record<string, string>),
   }
   if (token) {
@@ -88,7 +89,7 @@ export const api = {
   surveys: {
     list: () => request<{ surveys: Survey[] }>("/surveys"),
     get: (id: string) => request<{ survey: Survey }>(`/surveys/${id}`),
-    create: (data: { title: string; subtitle?: string; voiceDurationLimitSec?: number; textFeedbackEnabled?: boolean }) =>
+    create: (data: { title: string; subtitle?: string; voiceDurationLimitSec?: number; textFeedbackEnabled?: boolean; theme?: Record<string, unknown> }) =>
       request<{ survey: Survey }>("/surveys", {
         method: "POST",
         body: JSON.stringify(data),
@@ -102,5 +103,49 @@ export const api = {
       request<{ survey: Survey }>(`/surveys/${id}/publish`, { method: "POST" }),
     unpublish: (id: string) =>
       request<{ survey: Survey }>(`/surveys/${id}/unpublish`, { method: "POST" }),
+    listResponses: (surveyId: string) =>
+      request<{
+        responses: Array<{
+          id: string
+          durationSec: number | null
+          textFeedback: string | null
+          status: "PENDING" | "PROCESSED" | "FAILED"
+          createdAt: string
+          attachment: {
+            r2Url: string
+            mimeType: string
+            sizeBytes: number
+          } | null
+          transcript: {
+            text: string
+            language: string | null
+          } | null
+          insight: {
+            summary: string
+            sentiment: string
+            urgency: string
+            tags: string[]
+          } | null
+        }>
+      }>(`/surveys/${surveyId}/responses`),
+    processResponse: (surveyId: string, responseId: string) =>
+      request<{ success: boolean }>(`/surveys/${surveyId}/responses/${responseId}/process`, {
+        method: "POST",
+      }),
+    getSurveyAnalysis: (surveyId: string) =>
+      request<{
+        analysis: {
+          totalResponses: number
+          summary: string
+          sentimentBreakdown: Record<string, number>
+          topTags: string[]
+          commonThemes: string[]
+          recommendations: string[]
+        }
+      }>(`/surveys/${surveyId}/analysis`),
+    deleteResponse: (surveyId: string, responseId: string) =>
+      request<{ success: boolean }>(`/surveys/${surveyId}/responses/${responseId}`, {
+        method: "DELETE",
+      }),
   },
 }

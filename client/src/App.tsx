@@ -6,6 +6,7 @@ import DashboardLayout from "@/layouts/DashboardLayout"
 import { Toaster } from "@/components/ui/toast"
 import Overview from "@/pages/Dashboard/Overview"
 import Surveys from "@/pages/Dashboard/Surveys"
+import Responses from "@/pages/Dashboard/Responses"
 import Analytics from "@/pages/Dashboard/Analytics"
 import Settings from "@/pages/Dashboard/Settings"
 
@@ -34,6 +35,7 @@ function App() {
           >
             <Route index element={<Overview />} />
             <Route path="surveys" element={<Surveys />} />
+            <Route path="surveys/:surveyId/responses" element={<Responses />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="settings" element={<Settings />} />
           </Route>

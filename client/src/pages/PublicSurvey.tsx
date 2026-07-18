@@ -67,6 +67,8 @@ export default function PublicSurvey() {
   }
 
   if (submitted) {
+    const theme = (survey?.theme as Record<string, unknown>) ?? {}
+    const thankYou = (theme.thankYouMessage as string) || "Your response has been recorded and will be reviewed shortly."
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-sm">
@@ -76,9 +78,7 @@ export default function PublicSurvey() {
             </div>
             <div className="space-y-1.5">
               <CardTitle className="text-xl">Thank you</CardTitle>
-              <CardDescription>
-                Your response has been recorded and will be reviewed shortly.
-              </CardDescription>
+              <CardDescription>{thankYou}</CardDescription>
             </div>
           </CardHeader>
         </Card>
@@ -125,13 +125,27 @@ export default function PublicSurvey() {
             )}
           </div>
 
-          <div className="flex items-start gap-2.5 rounded-lg bg-muted px-4 py-3">
-            <Lock className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Your response is anonymous. No personal information is collected.
-              Speak freely &mdash; your feedback helps <strong>{survey.orgName}</strong> improve.
-            </p>
-          </div>
+          {(() => {
+            const theme = (survey?.theme as Record<string, unknown>) ?? {}
+            const welcome = theme.welcomeMessage as string | undefined
+            if (welcome) {
+              return (
+                <div className="flex items-start gap-2.5 rounded-lg bg-muted px-4 py-3">
+                  <Lock className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground leading-relaxed">{welcome}</p>
+                </div>
+              )
+            }
+            return (
+              <div className="flex items-start gap-2.5 rounded-lg bg-muted px-4 py-3">
+                <Lock className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Your response is anonymous. No personal information is collected.
+                  Speak freely &mdash; your feedback helps <strong>{survey.orgName}</strong> improve.
+                </p>
+              </div>
+            )
+          })()}
 
           <VoiceRecorder
             slug={slug!}

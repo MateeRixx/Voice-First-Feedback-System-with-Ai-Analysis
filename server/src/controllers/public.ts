@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma";
 import { generateUploadSignature } from "../lib/cloudinary";
+import { processResponse } from "../lib/process-response";
 import type { Request, Response } from "express";
 
 export async function getSurveyBySlug(req: Request, res: Response) {
@@ -85,7 +86,11 @@ export async function submitResponse(req: Request, res: Response) {
       },
     });
 
+    // Respond immediately — process audio in background
     res.status(201).json({ response: { id: response.id } });
+    processResponse(response.id).catch((err) => {
+      console.error(`Auto-process failed for ${response.id}:`, err);
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to submit response" });

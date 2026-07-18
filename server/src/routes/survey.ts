@@ -7,6 +7,10 @@ import {
   update,
   publishSurvey,
   unpublishSurvey,
+  listResponses,
+  processSingleResponse,
+  getSurveyAnalysis,
+  deleteResponse,
 } from "../controllers/survey";
 
 const router = Router();
@@ -19,5 +23,9 @@ router.post("/", create);
 router.patch("/:id", update);
 router.post("/:id/publish", publishSurvey);
 router.post("/:id/unpublish", unpublishSurvey);
+router.get("/:surveyId/responses", listResponses);
+router.post("/:surveyId/responses/:responseId/process", processSingleResponse);
+router.get("/:surveyId/analysis", getSurveyAnalysis);
+router.delete("/:surveyId/responses/:responseId", deleteResponse);
 
 export default router;
