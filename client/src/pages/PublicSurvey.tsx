@@ -1,15 +1,19 @@
 import { useState, useEffect } from "react"
 import { useParams } from "react-router-dom"
 import { api } from "@/lib/api"
-import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import VoiceRecorder from "@/components/VoiceRecorder"
 import AnimatedHero from "@/components/AnimatedHero"
 import {
   Mic,
-  Shield,
   Clock,
   MessageSquareText,
   CheckCircle2,
+  ShieldX,
+  Volume2,
+  Lock,
 } from "lucide-react"
 
 export default function PublicSurvey() {
@@ -17,7 +21,7 @@ export default function PublicSurvey() {
   const [survey, setSurvey] = useState<Awaited<ReturnType<typeof api.public.getSurvey>>["survey"] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
-  const [submitted] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
 
   useEffect(() => {
     if (!slug) return
@@ -31,12 +35,12 @@ export default function PublicSurvey() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-violet-50 via-fuchsia-50 to-cyan-50 dark:from-gray-950 dark:via-violet-950/30 dark:to-fuchsia-950/30 flex items-center justify-center p-4">
-        <div className="w-full max-w-lg space-y-6 text-center">
-          <Skeleton className="mx-auto h-40 w-40 rounded-full" />
-          <Skeleton className="mx-auto h-8 w-64" />
-          <Skeleton className="mx-auto h-4 w-80" />
-          <Skeleton className="mx-auto h-12 w-48 rounded-full" />
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="w-full max-w-md space-y-6 text-center">
+          <Skeleton className="mx-auto h-36 w-36 rounded-full" />
+          <Skeleton className="mx-auto h-7 w-56" />
+          <Skeleton className="mx-auto h-4 w-72" />
+          <Skeleton className="mx-auto h-10 w-full rounded-lg" />
         </div>
       </div>
     )
@@ -44,116 +48,99 @@ export default function PublicSurvey() {
 
   if (error || !survey) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-violet-50 via-fuchsia-50 to-cyan-50 dark:from-gray-950 dark:via-violet-950/30 dark:to-fuchsia-950/30 flex items-center justify-center p-4">
-        <div className="w-full max-w-md text-center space-y-4">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-            <Shield className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <h1 className="text-xl font-semibold">Survey not available</h1>
-          <p className="text-sm text-muted-foreground">
-            {error || "This survey may have been unpublished or the link is incorrect."}
-          </p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-sm">
+          <CardHeader className="text-center space-y-4">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+              <ShieldX className="h-6 w-6 text-destructive" />
+            </div>
+            <div className="space-y-1.5">
+              <CardTitle className="text-xl">Survey not available</CardTitle>
+              <CardDescription>
+                {error || "This survey may have been unpublished or the link is incorrect."}
+              </CardDescription>
+            </div>
+          </CardHeader>
+        </Card>
       </div>
     )
   }
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-violet-50 via-fuchsia-50 to-cyan-50 dark:from-gray-950 dark:via-violet-950/30 dark:to-fuchsia-950/30 flex items-center justify-center p-4">
-        <div className="w-full max-w-md text-center space-y-6 animate-in fade-in-0 zoom-in-95">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/10">
-            <CheckCircle2 className="h-10 w-10 text-emerald-500" />
-          </div>
-          <div className="space-y-2">
-            <h1 className="text-2xl font-semibold">Thank you</h1>
-            <p className="text-muted-foreground">
-              Your response has been recorded and will be reviewed shortly.
-            </p>
-          </div>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-sm">
+          <CardHeader className="text-center space-y-4">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/10">
+              <CheckCircle2 className="h-7 w-7 text-emerald-500" />
+            </div>
+            <div className="space-y-1.5">
+              <CardTitle className="text-xl">Thank you</CardTitle>
+              <CardDescription>
+                Your response has been recorded and will be reviewed shortly.
+              </CardDescription>
+            </div>
+          </CardHeader>
+        </Card>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-violet-50 via-fuchsia-50 to-cyan-50 dark:from-gray-950 dark:via-violet-950/30 dark:to-fuchsia-950/30">
-      {/* Subtle animated gradient overlay */}
-      <div className="fixed inset-0 animate-gradient pointer-events-none opacity-30 dark:opacity-20"
-        style={{
-          background: "linear-gradient(-45deg, rgba(139,92,246,0.15), rgba(232,121,249,0.1), rgba(6,182,212,0.1), rgba(251,146,60,0.08))",
-          backgroundSize: "400% 400%",
-        }}
-      />
-
-      <div className="relative z-10 mx-auto flex min-h-screen max-w-lg flex-col items-center justify-center px-6 py-12">
-        {/* Brand */}
-        <div className="mb-8 text-center">
-          <div className="inline-flex items-center gap-1.5 rounded-full border bg-white/50 dark:bg-gray-900/50 px-3 py-1 text-xs text-muted-foreground backdrop-blur-sm">
-            <Shield className="h-3 w-3" />
-            <span>Powered by {survey.orgName}</span>
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md overflow-hidden">
+        <CardHeader className="text-center space-y-6">
+          <div className="inline-flex items-center gap-1.5 rounded-md border bg-secondary px-2.5 py-0.5 text-xs font-semibold text-secondary-foreground mx-auto">
+            <Volume2 className="h-3 w-3" />
+            <span>{survey.orgName}</span>
           </div>
-        </div>
 
-        {/* Hero illustration */}
-        <div className="mb-8">
           <AnimatedHero />
-        </div>
 
-        {/* Survey details */}
-        <div className="w-full space-y-6 text-center">
-          <div className="space-y-2">
-            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              {survey.title}
-            </h1>
+          <div className="space-y-1.5">
+            <CardTitle className="text-2xl">{survey.title}</CardTitle>
             {survey.subtitle && (
-              <p className="text-muted-foreground leading-relaxed">
+              <CardDescription className="text-sm leading-relaxed max-w-sm mx-auto">
                 {survey.subtitle}
-              </p>
+              </CardDescription>
             )}
           </div>
+        </CardHeader>
 
-          {/* Info badges */}
-          <div className="flex flex-wrap justify-center gap-3 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5 rounded-full border bg-white/50 dark:bg-gray-900/50 px-3 py-1.5 backdrop-blur-sm">
-              <Mic className="h-3.5 w-3.5" />
+        <CardContent className="space-y-5">
+          <div className="flex flex-wrap justify-center gap-2">
+            <Badge variant="secondary" className="gap-1.5 font-normal">
+              <Mic className="h-3 w-3" />
               Voice response
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border bg-white/50 dark:bg-gray-900/50 px-3 py-1.5 backdrop-blur-sm">
-              <Clock className="h-3.5 w-3.5" />
+            </Badge>
+            <Badge variant="secondary" className="gap-1.5 font-normal">
+              <Clock className="h-3 w-3" />
               Up to {survey.voiceDurationLimitSec}s
-            </span>
+            </Badge>
             {survey.textFeedbackEnabled && (
-              <span className="inline-flex items-center gap-1.5 rounded-full border bg-white/50 dark:bg-gray-900/50 px-3 py-1.5 backdrop-blur-sm">
-                <MessageSquareText className="h-3.5 w-3.5" />
+              <Badge variant="secondary" className="gap-1.5 font-normal">
+                <MessageSquareText className="h-3 w-3" />
                 Text also accepted
-              </span>
+              </Badge>
             )}
           </div>
 
-          {/* Safety reassurance */}
-          <div className="rounded-xl border bg-white/60 dark:bg-gray-900/60 px-4 py-3 backdrop-blur-sm">
+          <div className="flex items-start gap-2.5 rounded-lg bg-muted px-4 py-3">
+            <Lock className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
             <p className="text-xs text-muted-foreground leading-relaxed">
               Your response is anonymous. No personal information is collected.
-              You can speak freely — your feedback helps {survey.orgName} improve.
+              Speak freely &mdash; your feedback helps <strong>{survey.orgName}</strong> improve.
             </p>
           </div>
 
-          {/* Record CTA */}
-          <div className="pt-4">
-            <Button
-              size="lg"
-              className="h-14 w-full gap-3 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-base font-medium text-white shadow-lg shadow-violet-500/25 hover:from-violet-600 hover:to-fuchsia-600 transition-all duration-300 active:scale-[0.98]"
-            >
-              <Mic className="h-5 w-5" />
-              Start Recording
-            </Button>
-            <p className="mt-3 text-xs text-muted-foreground">
-              Tap to begin. You'll have {survey.voiceDurationLimitSec} seconds.
-            </p>
-          </div>
-        </div>
-      </div>
+          <VoiceRecorder
+            slug={slug!}
+            voiceDurationLimitSec={survey.voiceDurationLimitSec}
+            textFeedbackEnabled={survey.textFeedbackEnabled}
+            onComplete={() => setSubmitted(true)}
+          />
+        </CardContent>
+      </Card>
     </div>
   )
 }

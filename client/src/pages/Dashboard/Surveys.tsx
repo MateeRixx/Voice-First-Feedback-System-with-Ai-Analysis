@@ -15,6 +15,7 @@ import {
   Clock,
   CalendarDays,
   Eye,
+  ExternalLink,
   Loader2,
   Globe,
   GlobeOff,
@@ -177,11 +178,11 @@ export default function Surveys() {
                 </div>
                 <Separator className="my-3" />
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                  <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => toast.success("Response management coming soon")}>
                     <Eye className="h-3.5 w-3.5" />
                     Responses
                   </Button>
-                  <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                  <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => toast.success("Analytics coming soon")}>
                     <BarChart3 className="h-3.5 w-3.5" />
                     Analytics
                   </Button>

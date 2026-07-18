@@ -68,6 +68,21 @@ export const api = {
           responseCount: number
         }
       }>(`/public/surveys/${slug}`),
+
+    getUploadSignature: (slug: string) =>
+      request<{
+        timestamp: number
+        signature: string
+        folder: string
+        cloudName: string
+        apiKey: string
+      }>(`/public/surveys/${slug}/upload-signature`),
+
+    submitResponse: (slug: string, data: { audioUrl: string; durationSec?: number; textFeedback?: string }) =>
+      request<{ response: { id: string } }>(`/public/surveys/${slug}/responses`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
   },
 
   surveys: {

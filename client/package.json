@@ -30,6 +30,7 @@
     "react-hook-form": "^7.81.0",
     "react-router-dom": "^7.18.1",
     "tailwind-merge": "^3.6.0",
+    "wavesurfer.js": "^7.12.11",
     "zod": "^4.4.3"
   },
   "devDependencies": {

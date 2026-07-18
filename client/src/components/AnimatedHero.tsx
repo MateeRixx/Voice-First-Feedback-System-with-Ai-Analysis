@@ -2,25 +2,25 @@ import { Mic } from "lucide-react"
 
 export default function AnimatedHero() {
   return (
-    <div className="relative mx-auto flex h-40 w-40 items-center justify-center">
-      {/* Ambient glow rings */}
-      <div className="absolute inset-0 animate-pulse-soft rounded-full bg-gradient-to-br from-violet-500/5 via-fuchsia-500/5 to-cyan-500/5 blur-xl" />
-      <div className="absolute inset-2 animate-pulse-slow rounded-full bg-gradient-to-br from-violet-500/10 via-fuchsia-500/10 to-cyan-500/10 blur-lg" />
-      <div className="absolute inset-4 animate-pulse-medium rounded-full bg-gradient-to-br from-violet-500/15 to-fuchsia-500/15 blur-md" />
+    <div className="relative mx-auto flex h-36 w-36 items-center justify-center">
+      {/* Ambient glow rings — using design system tokens */}
+      <div className="absolute inset-0 animate-pulse-soft rounded-full bg-primary/5 blur-xl" />
+      <div className="absolute inset-3 animate-pulse-slow rounded-full bg-primary/10 blur-lg" />
+      <div className="absolute inset-6 animate-pulse-medium rounded-full bg-primary/[0.07] blur-md" />
 
-      {/* Floating particles */}
-      <div className="absolute -top-2 left-6 h-2 w-2 animate-float-slow rounded-full bg-violet-400/30" />
-      <div className="absolute bottom-4 right-4 h-1.5 w-1.5 animate-float-medium rounded-full bg-fuchsia-400/25" />
-      <div className="absolute left-3 top-12 h-1 w-1 animate-float-fast rounded-full bg-cyan-400/20" />
-      <div className="absolute right-8 top-8 h-2 w-2 animate-float-slow rounded-full bg-amber-400/20" />
-      <div className="absolute bottom-8 left-8 h-1.5 w-1.5 animate-float-medium rounded-full bg-rose-400/20" />
+      {/* Floating particles — subtle, neutral */}
+      <div className="absolute -top-1 left-7 h-2 w-2 animate-float-slow rounded-full bg-primary/20" />
+      <div className="absolute bottom-5 right-5 h-1.5 w-1.5 animate-float-medium rounded-full bg-primary/15" />
+      <div className="absolute left-4 top-14 h-1 w-1 animate-float-fast rounded-full bg-primary/10" />
+      <div className="absolute right-9 top-9 h-1.5 w-1.5 animate-float-slow rounded-full bg-primary/15" />
+      <div className="absolute bottom-10 left-9 h-1 w-1 animate-float-medium rounded-full bg-primary/10" />
 
-      {/* Waveform bars around mic */}
-      <div className="absolute flex items-center gap-[2px]">
+      {/* Waveform bars */}
+      <div className="absolute flex items-center gap-[3px]">
         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
           <div
             key={i}
-            className="w-[3px] rounded-full bg-gradient-to-t from-violet-400/40 to-fuchsia-400/40"
+            className="w-[3px] rounded-full bg-primary/25"
             style={{
               height: `${12 + Math.sin(i * 0.8) * 8 + 4}px`,
               animation: `waveform 2.4s ease-in-out ${i * 0.15}s infinite`,
@@ -29,9 +29,9 @@ export default function AnimatedHero() {
         ))}
       </div>
 
-      {/* Mic icon */}
-      <div className="relative z-10 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 shadow-lg shadow-violet-500/25">
-        <Mic className="h-9 w-9 text-white" />
+      {/* Mic icon — using design system token, matching Login page */}
+      <div className="relative z-10 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+        <Mic className="h-8 w-8 text-primary" />
       </div>
     </div>
   )
