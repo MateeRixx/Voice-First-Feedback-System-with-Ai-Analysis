@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { ThemeProvider } from "@/components/ThemeProvider"
 import Login from "@/pages/Login"
+import PublicSurvey from "@/pages/PublicSurvey"
 import DashboardLayout from "@/layouts/DashboardLayout"
 import { Toaster } from "@/components/ui/toast"
 import Overview from "@/pages/Dashboard/Overview"
@@ -36,6 +37,7 @@ function App() {
             <Route path="analytics" element={<Analytics />} />
             <Route path="settings" element={<Settings />} />
           </Route>
+          <Route path="survey/:slug" element={<PublicSurvey />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>

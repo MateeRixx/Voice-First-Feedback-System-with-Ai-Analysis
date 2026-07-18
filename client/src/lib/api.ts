@@ -54,6 +54,22 @@ export const api = {
   logout: () =>
     request<{ message: string }>("/auth/logout", { method: "POST" }),
 
+  public: {
+    getSurvey: (slug: string) =>
+      request<{
+        survey: {
+          id: string
+          title: string
+          subtitle: string | null
+          orgName: string
+          voiceDurationLimitSec: number
+          textFeedbackEnabled: boolean
+          theme: Record<string, unknown> | null
+          responseCount: number
+        }
+      }>(`/public/surveys/${slug}`),
+  },
+
   surveys: {
     list: () => request<{ surveys: Survey[] }>("/surveys"),
     get: (id: string) => request<{ survey: Survey }>(`/surveys/${id}`),
