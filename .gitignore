@@ -2,6 +2,11 @@
 .env.example
 .env.dev
 node_modules
+AgentInstruction.md
+DESIGN.md
+instruction.md
+
+
 
 # Prisma generated client
 server/generated/
