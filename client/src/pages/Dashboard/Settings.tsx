@@ -1,15 +1,13 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
 import { useAuth } from "@/hooks/useAuth"
 import {
   User,
   Bell,
-  Webhook,
   Key,
-  Save,
+  Clock,
 } from "lucide-react"
 
 export default function Settings() {
@@ -24,7 +22,6 @@ export default function Settings() {
         </p>
       </div>
 
-      {/* Profile */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
@@ -44,13 +41,9 @@ export default function Settings() {
               <Input value={user?.role?.toLowerCase() ?? ""} readOnly />
             </div>
           </div>
-          <Button size="sm" className="gap-2">
-            <Save className="h-4 w-4" /> Save changes
-          </Button>
         </CardContent>
       </Card>
 
-      {/* Notifications */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
@@ -65,20 +58,22 @@ export default function Settings() {
               <p className="text-sm font-medium">New responses</p>
               <p className="text-xs text-muted-foreground">Get notified when new responses are collected</p>
             </div>
-            <Button variant="outline" size="sm">Configure</Button>
+            <Badge variant="secondary" className="gap-1">
+              <Clock className="h-3 w-3" /> Coming soon
+            </Badge>
           </div>
-          <Separator />
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium">High urgency alerts</p>
               <p className="text-xs text-muted-foreground">Immediate alerts for negative feedback</p>
             </div>
-            <Button variant="outline" size="sm">Configure</Button>
+            <Badge variant="secondary" className="gap-1">
+              <Clock className="h-3 w-3" /> Coming soon
+            </Badge>
           </div>
         </CardContent>
       </Card>
 
-      {/* API */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
@@ -93,19 +88,18 @@ export default function Settings() {
               <p className="text-sm font-medium">Webhook URL</p>
               <p className="text-xs text-muted-foreground">Send response data to your endpoint</p>
             </div>
-            <Button variant="outline" size="sm" className="gap-2">
-              <Webhook className="h-3.5 w-3.5" /> Add
-            </Button>
+            <Badge variant="secondary" className="gap-1">
+              <Clock className="h-3 w-3" /> Coming soon
+            </Badge>
           </div>
-          <Separator />
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium">API Keys</p>
               <p className="text-xs text-muted-foreground">Manage API access tokens</p>
             </div>
-            <Button variant="outline" size="sm" className="gap-2">
-              <Key className="h-3.5 w-3.5" /> Manage
-            </Button>
+            <Badge variant="secondary" className="gap-1">
+              <Clock className="h-3 w-3" /> Coming soon
+            </Badge>
           </div>
         </CardContent>
       </Card>

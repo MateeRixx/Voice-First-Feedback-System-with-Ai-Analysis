@@ -1,14 +1,16 @@
-const API_BASE = "http://127.0.0.1:3000/api"
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:3000/api"
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = localStorage.getItem("truetone-token")
   const hasBody = options?.body !== undefined && options.body !== null
-  const headers: Record<string, string> = {
-    ...(hasBody ? { "Content-Type": "application/json" } : {}),
-    ...(options?.headers as Record<string, string>),
-  }
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`
+  const headers: Record<string, string> = {}
+  if (hasBody) headers["Content-Type"] = "application/json"
+  if (token) headers["Authorization"] = `Bearer ${token}`
+  if (options?.headers) {
+    const extraHeaders = options.headers as Record<string, string>
+    for (const key in extraHeaders) {
+      headers[key] = extraHeaders[key]
+    }
   }
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers })
@@ -26,15 +28,23 @@ export interface AuthResponse {
   user: { id: string; email: string; role: string; orgId: string }
 }
 
+export type MediaItem = {
+  type: "image" | "video"
+  url: string
+  caption?: string
+}
+
 export interface Survey {
   id: string
   orgId: string
   title: string
   subtitle: string | null
+  description: string | null
   slug: string
   voiceDurationLimitSec: number
   textFeedbackEnabled: boolean
   theme: Record<string, unknown> | null
+  media: MediaItem[] | null
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED"
   createdAt: string
   updatedAt: string
@@ -62,10 +72,12 @@ export const api = {
           id: string
           title: string
           subtitle: string | null
+          description: string | null
           orgName: string
           voiceDurationLimitSec: number
           textFeedbackEnabled: boolean
           theme: Record<string, unknown> | null
+          media: MediaItem[] | null
           responseCount: number
         }
       }>(`/public/surveys/${slug}`),
@@ -79,7 +91,7 @@ export const api = {
         apiKey: string
       }>(`/public/surveys/${slug}/upload-signature`),
 
-    submitResponse: (slug: string, data: { audioUrl: string; durationSec?: number; textFeedback?: string }) =>
+    submitResponse: (slug: string, data: { audioUrl?: string; durationSec?: number; sizeBytes?: number; textFeedback?: string }) =>
       request<{ response: { id: string } }>(`/public/surveys/${slug}/responses`, {
         method: "POST",
         body: JSON.stringify(data),
@@ -89,12 +101,12 @@ export const api = {
   surveys: {
     list: () => request<{ surveys: Survey[] }>("/surveys"),
     get: (id: string) => request<{ survey: Survey }>(`/surveys/${id}`),
-    create: (data: { title: string; subtitle?: string; voiceDurationLimitSec?: number; textFeedbackEnabled?: boolean; theme?: Record<string, unknown> }) =>
+    create: (data: { title: string; subtitle?: string; description?: string; voiceDurationLimitSec?: number; textFeedbackEnabled?: boolean; theme?: Record<string, unknown>; media?: MediaItem[] }) =>
       request<{ survey: Survey }>("/surveys", {
         method: "POST",
         body: JSON.stringify(data),
       }),
-    update: (id: string, data: Partial<{ title: string; subtitle: string; voiceDurationLimitSec: number; textFeedbackEnabled: boolean; theme: Record<string, unknown> }>) =>
+    update: (id: string, data: Partial<{ title: string; subtitle: string; description: string; voiceDurationLimitSec: number; textFeedbackEnabled: boolean; theme: Record<string, unknown>; media: MediaItem[] }>) =>
       request<{ survey: Survey }>(`/surveys/${id}`, {
         method: "PATCH",
         body: JSON.stringify(data),
@@ -103,7 +115,7 @@ export const api = {
       request<{ survey: Survey }>(`/surveys/${id}/publish`, { method: "POST" }),
     unpublish: (id: string) =>
       request<{ survey: Survey }>(`/surveys/${id}/unpublish`, { method: "POST" }),
-    listResponses: (surveyId: string) =>
+    listResponses: (surveyId: string, params?: { page?: number; limit?: number }) =>
       request<{
         responses: Array<{
           id: string
@@ -127,25 +139,59 @@ export const api = {
             tags: string[]
           } | null
         }>
-      }>(`/surveys/${surveyId}/responses`),
+        pagination: {
+          page: number
+          limit: number
+          total: number
+          totalPages: number
+        }
+      }>(`/surveys/${surveyId}/responses${params ? `?page=${params.page || 1}&limit=${params.limit || 20}` : ""}`),
     processResponse: (surveyId: string, responseId: string) =>
       request<{ success: boolean }>(`/surveys/${surveyId}/responses/${responseId}/process`, {
         method: "POST",
       }),
-    getSurveyAnalysis: (surveyId: string) =>
+    getSurveyAnalysis: (surveyId: string, force?: boolean) =>
       request<{
         analysis: {
           totalResponses: number
           summary: string
           sentimentBreakdown: Record<string, number>
           topTags: string[]
-          commonThemes: string[]
-          recommendations: string[]
+          commonThemes: Array<{ theme: string; frequency: string; sentiment: string }>
+          recommendations: Array<{ priority: string; action: string; impact: string }>
         }
-      }>(`/surveys/${surveyId}/analysis`),
+      }>(`/surveys/${surveyId}/analysis${force ? "?_force=1" : ""}`),
     deleteResponse: (surveyId: string, responseId: string) =>
       request<{ success: boolean }>(`/surveys/${surveyId}/responses/${responseId}`, {
         method: "DELETE",
       }),
+    delete: (id: string) =>
+      request<{ success: boolean }>(`/surveys/${id}`, { method: "DELETE" }),
+  },
+
+  dashboard: {
+    overview: () =>
+      request<{
+        stats: {
+          totalResponses: number
+          totalSurveys: number
+          publishedSurveys: number
+          draftSurveys: number
+          processedCount: number
+          failedCount: number
+          processingRate: number
+          totalProcessed: number
+        }
+        recentResponses: Array<{
+          id: string
+          surveyTitle: string
+          sentiment: string | null
+          urgency: string | null
+          durationSec: number | null
+          createdAt: string
+          summary: string | null
+          status: string
+        }>
+      }>("/dashboard/overview"),
   },
 }

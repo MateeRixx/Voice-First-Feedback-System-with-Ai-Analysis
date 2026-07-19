@@ -1,11 +1,29 @@
+import { z } from "zod"
 import { prisma } from "../lib/prisma";
-import { processResponse } from "../lib/process-response";
+import { enqueueProcessResponse } from "../lib/job-queue";
 import { analyzeSurvey } from "../lib/analyze-survey";
+import { assertAuth } from "../middleware/auth";
 import type { Request, Response } from "express";
+
+const mediaItemSchema = z.object({
+  type: z.enum(["image", "video"]),
+  url: z.string().url(),
+  caption: z.string().optional(),
+});
+
+const createSurveySchema = z.object({
+  title: z.string().min(1, "Title is required").max(200),
+  subtitle: z.string().max(500).optional(),
+  description: z.string().max(5000).optional(),
+  voiceDurationLimitSec: z.number().int().min(10).max(300).optional(),
+  textFeedbackEnabled: z.boolean().optional(),
+  theme: z.record(z.string(), z.unknown()).optional(),
+  media: z.array(mediaItemSchema).max(20).optional(),
+});
 
 export async function list(req: Request, res: Response) {
   try {
-    const orgId = req.user!.orgId;
+    const { orgId } = assertAuth(req);
     const surveys = await prisma.survey.findMany({
       where: { orgId },
       orderBy: { updatedAt: "desc" },
@@ -20,7 +38,7 @@ export async function list(req: Request, res: Response) {
 
 export async function getById(req: Request, res: Response) {
   try {
-    const orgId = req.user!.orgId;
+    const { orgId } = assertAuth(req);
     const survey = await prisma.survey.findFirst({
       where: { id: req.params.id, orgId },
       include: { _count: { select: { responses: true } } },
@@ -35,10 +53,14 @@ export async function getById(req: Request, res: Response) {
 
 export async function create(req: Request, res: Response) {
   try {
-    const orgId = req.user!.orgId;
-    const { title, subtitle, voiceDurationLimitSec, textFeedbackEnabled, theme } = req.body;
+    const { orgId } = assertAuth(req);
 
-    if (!title) return res.status(400).json({ error: "Title is required" });
+    const parsed = createSurveySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error.issues.map((e) => e.message).join(", ") });
+    }
+
+    const { title, subtitle, description, voiceDurationLimitSec, textFeedbackEnabled, theme, media } = parsed.data;
 
     const slug = title
       .toLowerCase()
@@ -50,10 +72,12 @@ export async function create(req: Request, res: Response) {
         orgId,
         title,
         subtitle: subtitle || null,
+        description: description || null,
         slug,
         voiceDurationLimitSec: voiceDurationLimitSec || 120,
         textFeedbackEnabled: textFeedbackEnabled ?? false,
-        ...(theme !== undefined && { theme }),
+        theme: theme as object | undefined,
+        media: media as object | undefined,
       },
     });
 
@@ -66,8 +90,8 @@ export async function create(req: Request, res: Response) {
 
 export async function update(req: Request, res: Response) {
   try {
-    const orgId = req.user!.orgId;
-    const { title, subtitle, voiceDurationLimitSec, textFeedbackEnabled, theme } = req.body;
+    const { orgId } = assertAuth(req);
+    const { title, subtitle, description, voiceDurationLimitSec, textFeedbackEnabled, theme, media } = req.body;
 
     const existing = await prisma.survey.findFirst({ where: { id: req.params.id, orgId } });
     if (!existing) return res.status(404).json({ error: "Survey not found" });
@@ -77,9 +101,11 @@ export async function update(req: Request, res: Response) {
       data: {
         ...(title !== undefined && { title }),
         ...(subtitle !== undefined && { subtitle }),
+        ...(description !== undefined && { description }),
         ...(voiceDurationLimitSec !== undefined && { voiceDurationLimitSec }),
         ...(textFeedbackEnabled !== undefined && { textFeedbackEnabled }),
         ...(theme !== undefined && { theme }),
+        ...(media !== undefined && { media }),
       },
     });
 
@@ -92,7 +118,7 @@ export async function update(req: Request, res: Response) {
 
 export async function publishSurvey(req: Request, res: Response) {
   try {
-    const orgId = req.user!.orgId;
+    const { orgId } = assertAuth(req);
     const existing = await prisma.survey.findFirst({ where: { id: req.params.id, orgId } });
     if (!existing) return res.status(404).json({ error: "Survey not found" });
 
@@ -110,7 +136,7 @@ export async function publishSurvey(req: Request, res: Response) {
 
 export async function unpublishSurvey(req: Request, res: Response) {
   try {
-    const orgId = req.user!.orgId;
+    const { orgId } = assertAuth(req);
     const existing = await prisma.survey.findFirst({ where: { id: req.params.id, orgId } });
     if (!existing) return res.status(404).json({ error: "Survey not found" });
 
@@ -128,23 +154,39 @@ export async function unpublishSurvey(req: Request, res: Response) {
 
 export async function listResponses(req: Request, res: Response) {
   try {
-    const orgId = req.user!.orgId;
+    const { orgId } = assertAuth(req);
     const { surveyId } = req.params;
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const skip = (page - 1) * limit;
 
     const survey = await prisma.survey.findFirst({ where: { id: surveyId, orgId } });
     if (!survey) return res.status(404).json({ error: "Survey not found" });
 
-    const responses = await prisma.surveyResponse.findMany({
-      where: { surveyId },
-      orderBy: { createdAt: "desc" },
-      include: {
-        attachment: true,
-        transcript: true,
-        insight: true,
+    const [responses, total] = await Promise.all([
+      prisma.surveyResponse.findMany({
+        where: { surveyId },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+        include: {
+          attachment: true,
+          transcript: true,
+          insight: true,
+        },
+      }),
+      prisma.surveyResponse.count({ where: { surveyId } }),
+    ]);
+
+    res.json({
+      responses,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
       },
     });
-
-    res.json({ responses });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to fetch responses" });
@@ -153,7 +195,7 @@ export async function listResponses(req: Request, res: Response) {
 
 export async function processSingleResponse(req: Request, res: Response) {
   try {
-    const orgId = req.user!.orgId;
+    const { orgId } = assertAuth(req);
     const { surveyId, responseId } = req.params;
 
     const survey = await prisma.survey.findFirst({ where: { id: surveyId, orgId } });
@@ -164,35 +206,87 @@ export async function processSingleResponse(req: Request, res: Response) {
     });
     if (!response) return res.status(404).json({ error: "Response not found" });
 
-    await processResponse(responseId);
+    await enqueueProcessResponse(responseId);
 
     res.json({ success: true });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: error instanceof Error ? error.message : "Failed to process response" });
+    res.status(500).json({ error: "Failed to process response" });
   }
 }
 
+const analysisResultSchema = z.object({
+  totalResponses: z.number(),
+  summary: z.string(),
+  sentimentBreakdown: z.record(z.string(), z.number()),
+  topTags: z.array(z.string()),
+  commonThemes: z.array(z.object({ theme: z.string(), frequency: z.string(), sentiment: z.string() })),
+  recommendations: z.array(z.object({ priority: z.string(), action: z.string(), impact: z.string() })),
+});
+
 export async function getSurveyAnalysis(req: Request, res: Response) {
   try {
-    const orgId = req.user!.orgId;
+    const { orgId } = assertAuth(req);
     const { surveyId } = req.params;
+    const force = req.query._force === "1";
 
     const survey = await prisma.survey.findFirst({ where: { id: surveyId, orgId } });
     if (!survey) return res.status(404).json({ error: "Survey not found" });
 
+    if (!force && survey.analysisResult) {
+      const parsed = analysisResultSchema.safeParse(survey.analysisResult);
+      if (parsed.success) {
+        res.json({ analysis: parsed.data });
+        return;
+      }
+    }
+
     const analysis = await analyzeSurvey(surveyId);
+
+    await prisma.survey.update({
+      where: { id: surveyId },
+      data: { analysisResult: JSON.parse(JSON.stringify(analysis)) },
+    });
 
     res.json({ analysis });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: error instanceof Error ? error.message : "Failed to analyze survey" });
+    res.status(500).json({ error: "Failed to analyze survey" });
+  }
+}
+
+export async function deleteSurvey(req: Request, res: Response) {
+  try {
+    const { orgId } = assertAuth(req);
+    const surveyId = req.params.id;
+
+    const survey = await prisma.survey.findFirst({ where: { id: surveyId, orgId } });
+    if (!survey) return res.status(404).json({ error: "Survey not found" });
+
+    const responses = await prisma.surveyResponse.findMany({
+      where: { surveyId },
+      select: { id: true },
+    });
+    const responseIds = responses.map((r) => r.id);
+
+    await prisma.$transaction([
+      prisma.aIInsight.deleteMany({ where: { responseId: { in: responseIds } } }),
+      prisma.transcript.deleteMany({ where: { responseId: { in: responseIds } } }),
+      prisma.responseAttachment.deleteMany({ where: { responseId: { in: responseIds } } }),
+      prisma.surveyResponse.deleteMany({ where: { surveyId } }),
+      prisma.survey.delete({ where: { id: surveyId } }),
+    ]);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to delete survey" });
   }
 }
 
 export async function deleteResponse(req: Request, res: Response) {
   try {
-    const orgId = req.user!.orgId;
+    const { orgId } = assertAuth(req);
     const { surveyId, responseId } = req.params;
 
     const survey = await prisma.survey.findFirst({ where: { id: surveyId, orgId } });
@@ -203,7 +297,12 @@ export async function deleteResponse(req: Request, res: Response) {
     });
     if (!existing) return res.status(404).json({ error: "Response not found" });
 
-    await prisma.surveyResponse.delete({ where: { id: responseId } });
+    await prisma.$transaction([
+      prisma.aIInsight.deleteMany({ where: { responseId } }),
+      prisma.transcript.deleteMany({ where: { responseId } }),
+      prisma.responseAttachment.deleteMany({ where: { responseId } }),
+      prisma.surveyResponse.delete({ where: { id: responseId } }),
+    ]);
 
     res.json({ success: true });
   } catch (error) {

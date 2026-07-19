@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Separator } from "@/components/ui/separator"
 import CreateSurvey from "./CreateSurvey"
+import ShareSurveyModal from "@/components/ShareSurveyModal"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { toast } from "@/components/ui/toast"
 import {
   Plus,
@@ -19,7 +21,10 @@ import {
   Loader2,
   Globe,
   GlobeOff,
+  Share2,
   FileText,
+  Pencil,
+  Trash2,
 } from "lucide-react"
 
 const statusColor: Record<string, "success" | "secondary" | "outline"> = {
@@ -45,6 +50,9 @@ export default function Surveys() {
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [toggling, setToggling] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
+  const [shareSlug, setShareSlug] = useState<string | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
   const fetchSurveys = useCallback(async () => {
     try {
@@ -87,8 +95,25 @@ export default function Surveys() {
     }
   }
 
+  function confirmDelete(id: string) {
+    setDeleteConfirm(id)
+  }
+
+  async function handleDelete(id: string) {
+    setDeleting(id)
+    try {
+      await api.surveys.delete(id)
+      toast.success("Survey deleted")
+      await fetchSurveys()
+    } catch {
+      toast.error("Failed to delete survey")
+    } finally {
+      setDeleting(null)
+    }
+  }
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 min-h-[calc(100vh-12rem)]">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Surveys</h1>
@@ -183,10 +208,21 @@ export default function Surveys() {
                     <Eye className="h-3.5 w-3.5" />
                     Responses
                   </Button>
-                  <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => navigate("/dashboard/analytics")}>
+                  <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => navigate(`/dashboard/analytics?surveyId=${survey.id}`)}>
                     <BarChart3 className="h-3.5 w-3.5" />
                     Analytics
                   </Button>
+                  {survey.status === "PUBLISHED" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 text-xs"
+                      onClick={() => setShareSlug(survey.slug)}
+                    >
+                      <Share2 className="h-3.5 w-3.5" />
+                      Share
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
@@ -195,6 +231,29 @@ export default function Surveys() {
                   >
                     <Copy className="h-3.5 w-3.5" />
                     Copy link
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 text-xs"
+                    onClick={() => navigate(`/dashboard/surveys/${survey.id}/responses`)}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 text-xs text-destructive hover:text-destructive"
+                    disabled={deleting === survey.id}
+                    onClick={() => confirmDelete(survey.id)}
+                  >
+                    {deleting === survey.id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3.5 w-3.5" />
+                    )}
+                    Delete
                   </Button>
                   <Button
                     variant={survey.status === "PUBLISHED" ? "secondary" : "default"}
@@ -224,6 +283,25 @@ export default function Surveys() {
         onOpenChange={setShowCreate}
         onCreated={fetchSurveys}
       />
+
+      <ConfirmDialog
+        open={!!deleteConfirm}
+        onOpenChange={(v) => !v && setDeleteConfirm(null)}
+        title="Delete survey"
+        description="Are you sure you want to delete this survey? All responses and analysis will be permanently removed."
+        confirmLabel="Delete"
+        variant="destructive"
+        onConfirm={() => deleteConfirm && handleDelete(deleteConfirm)}
+      />
+
+      {shareSlug && (
+        <ShareSurveyModal
+          open={!!shareSlug}
+          onOpenChange={(v) => !v && setShareSlug(null)}
+          surveySlug={shareSlug}
+          surveyTitle={surveys.find((s) => s.slug === shareSlug)?.title ?? ""}
+        />
+      )}
     </div>
   )
 }

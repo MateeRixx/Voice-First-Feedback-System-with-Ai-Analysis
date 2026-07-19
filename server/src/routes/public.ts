@@ -1,10 +1,8 @@
 import { Router } from "express";
 import { getSurveyBySlug, getUploadSignature, submitResponse } from "../controllers/public";
 
-const router = Router();
+export const publicRouter = Router();
 
-router.get("/surveys/:slug", getSurveyBySlug);
-router.get("/surveys/:slug/upload-signature", getUploadSignature);
-router.post("/surveys/:slug/responses", submitResponse);
-
-export default router;
+publicRouter.get("/surveys/:slug", getSurveyBySlug);
+publicRouter.get("/surveys/:slug/upload-signature", getUploadSignature);
+publicRouter.post("/surveys/:slug/responses", submitResponse);

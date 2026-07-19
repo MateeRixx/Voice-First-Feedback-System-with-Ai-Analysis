@@ -1,108 +1,109 @@
-# 🎙️ **TrueTone**
+# TrueTone
 
-**AI-Powered Voice Survey & Feedback Platform**
+**Voice feedback platform with AI-powered analysis.**
 
-> Collect voice-based feedback, analyze it using AI, and generate intelligent dashboards with **actionable insights**.
-
-![Hero Banner](https://via.placeholder.com/1200x400/4F46E5/FFFFFF?text=EchoSense+AI+-+Voice+Feedback+Reimagined)
+Collect voice and text feedback via shareable survey links. Each response is transcribed (Sarvam AI) and analyzed (OpenRouter) for sentiment, urgency, and topics — displayed on a dashboard with Recharts visualizations.
 
 ---
 
-<p align="center">
-  <a href="#overview"><img src="https://img.shields.io/badge/Overview-4F46E5?style=for-the-badge" alt="Overview"></a>
-  <a href="#features"><img src="https://img.shields.io/badge/Features-10B981?style=for-the-badge" alt="Features"></a>
-  <a href="#architecture"><img src="https://img.shields.io/badge/Architecture-8B5CF6?style=for-the-badge" alt="Architecture"></a>
-  <a href="#tech-stack"><img src="https://img.shields.io/badge/Tech%20Stack-EC4899?style=for-the-badge" alt="Tech Stack"></a>
-</p>
+## Architecture
 
-<p align="center">
-  <img src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white" alt="TypeScript">
-  <img src="https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=black" alt="React">
-  <img src="https://img.shields.io/badge/Node.js-339933?logo=node.js&logoColor=white" alt="Node.js">
-  <img src="https://img.shields.io/badge/AI%20Powered-10B981" alt="AI Powered">
-  <img src="https://img.shields.io/badge/Production%20Ready-8B5CF6" alt="Production Ready">
-</p>
+```
+[React SPA] → REST API → [Express + TS]
+                              ↕
+                      [PostgreSQL + pg-boss]
+                              ↕
+              ┌───────────────┼───────────────┐
+         [Cloudinary]    [Sarvam AI]    [OpenRouter]
+         (audio storage)  (STT)          (LLM insights)
+```
 
----
-
-## 📌 **Overview**
-
-**EchoSense AI** is a modern **SaaS platform** that lets organizations collect **voice feedback** through beautiful shareable survey links and transforms raw customer voices into **intelligent business insights** using cutting-edge AI.
-
-While traditional survey tools rely on text forms and static charts, **EchoSense AI** is **voice-first** — letting customers speak naturally while AI does the heavy lifting: transcription, sentiment analysis, topic extraction, and dynamic dashboard generation.
-
-Built as a **production-ready full-stack application** showcasing scalable architecture, async processing, and seamless AI integration.
+- **pg-boss** for async job queue (no Redis — saves $0/mo on free tier)
+- **Cloudinary** for signed audio uploads (free 25GB tier)
+- **Sarvam AI** for speech-to-text (free 1000 min/month)
+- **OpenRouter** for LLM analysis via free Mistral/Llama models
 
 ---
 
-## 🎯 **Problem Statement**
+## Features
 
-Traditional feedback tools fall short:
-
-- ❌ Customers hate typing long responses
-- ❌ Teams waste hours manually reviewing recordings
-- ❌ Dashboards are rigid and predefined
-- ❌ Spotting real trends across hundreds of voices is painful
-
-**EchoSense AI solves this** by letting users **speak freely** while AI automatically:
-
-- ✅ Transcribes speech accurately
-- ✅ Detects sentiment & emotions
-- ✅ Extracts key topics & keywords
-- ✅ Summarizes responses
-- ✅ Generates **smart, context-aware dashboards**
+- Survey CRUD with publish/draft workflow
+- Voice recording via browser MediaRecorder + Cloudinary signed upload
+- Text-only feedback fallback
+- Async processing pipeline: transcribe → AI analysis (sentiment, urgency, tags)
+- Dashboard with overview stats, per-survey response list, and Analytics page (sentiment donut chart + urgency bar chart via Recharts)
+- Public survey submission (no login required)
+- Rate limiting (20 req/min public, 10 req/min auth)
+- JWT auth with bcrypt (12 rounds)
+- Helmet, CORS allowlisting, SSRF host validation, generic error responses
 
 ---
 
-## 🚀 **Core Features**
+## Stack
 
-### **Admin Portal** ✨
-- Secure authentication & team management
-- Create unlimited customizable surveys
-- Beautiful survey theming & branding
-- Voice duration & text fallback controls
-- Real-time response monitoring
-- **One-click AI Dashboard Generation**
-
-### **Public Survey** 🌐
-**No account needed.** Respondents simply:
-- Open a unique shareable link
-- Record voice feedback (with preview)
-- Add optional text notes
-- Submit instantly
-
-### **AI Analysis Engine** 🧠
-Every response triggers **asynchronous AI processing**:
-- Speech-to-Text (Whisper)
-- Sentiment & Emotion Detection
-- Topic & Keyword Extraction
-- Intelligent Summarization
-- Language Detection
-
-### **AI-Powered Dashboard** 📊
-Instead of static charts, the AI **dynamically generates** insights:
-
-| Insight Type              | Description                          |
-|---------------------------|--------------------------------------|
-| Overall Satisfaction      | Score + trend over time              |
-| Top Mentioned Topics      | Word clouds & frequency              |
-| Common Complaints         | Highlighted pain points              |
-| Positive Highlights       | What customers love                  |
-| Suggested Improvements    | Actionable recommendations           |
-| Executive Summary         | TL;DR generated by GPT               |
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 19, TypeScript, Tailwind CSS, shadcn/ui, Recharts, React Router |
+| Backend | Express, TypeScript, Prisma ORM, pg-boss |
+| Database | PostgreSQL (Neon) |
+| Storage | Cloudinary |
+| AI | Sarvam AI (STT), OpenRouter (LLM) |
 
 ---
 
-## 🏗️ **High-Level Architecture**
+## Getting Started
 
-```mermaid
-flowchart TD
-    A[Admin Portal<br/>React + TS] -->|REST API| B[Backend<br/>Express + TS]
-    C[Public Survey] -->|Submit| B
-    B --> D[PostgreSQL]
-    B --> E[Cloudflare R2<br/>Audio Storage]
-    B --> F[Redis + BullMQ<br/>Queue]
-    F --> G[Background Workers]
-    G --> H[OpenAI Whisper + GPT]
-    H --> D
-    B --> I[AI Dashboard]
+### Prerequisites
+
+- Node.js 18+
+- PostgreSQL
+- Cloudinary account
+- Sarvam AI API key(s)
+- OpenRouter API key
+
+### Setup
+
+```bash
+# 1. Clone and install
+git clone <repo>
+cd truetone
+cd server && npm install
+cd ../client && npm install
+
+# 2. Configure environment
+cp server/.env.example server/.env    # fill in your keys
+cp client/.env.example client/.env    # defaults to localhost:3000
+
+# 3. Database
+cd server
+npx prisma migrate dev
+npx prisma db seed   # optional
+
+# 4. Run
+# terminal 1 — server
+cd server && npx tsx src/index.ts
+
+# terminal 2 — client
+cd client && npm run dev
+```
+
+### Tests
+
+```bash
+cd server && npx vitest run     # 29 tests
+```
+
+---
+
+## Deployment
+
+See [DEPLOY.md](./DEPLOY.md) for step-by-step instructions for Render (backend) + Cloudflare Pages (frontend) + Neon (database).
+
+---
+
+## Key Design Decisions
+
+- **pg-boss over Redis:** The queue uses the same PostgreSQL database, eliminating a separate Redis instance. Cost-driven choice for free-tier hosting.
+- **Cloudinary over R2/S3:** Free 25GB tier with no credit card required. Signed uploads keep the API secret server-side.
+- **Sarvam AI:** Free tier covers 1000 minutes/month, sufficient for demo/portfolio usage.
+- **OpenRouter free models:** Access to Mistral, Llama, and other free models without a dedicated API subscription.

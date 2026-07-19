@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { ThemeProvider } from "@/components/ThemeProvider"
+import { ErrorBoundary } from "@/components/ErrorBoundary"
 import Login from "@/pages/Login"
+import Register from "@/pages/Register"
 import PublicSurvey from "@/pages/PublicSurvey"
 import DashboardLayout from "@/layouts/DashboardLayout"
 import { Toaster } from "@/components/ui/toast"
@@ -25,11 +27,14 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
           <Route
             path="/dashboard"
             element={
               <ProtectedRoute>
-                <DashboardLayout />
+                <ErrorBoundary>
+                  <DashboardLayout />
+                </ErrorBoundary>
               </ProtectedRoute>
             }
           >
@@ -39,7 +44,14 @@ function App() {
             <Route path="analytics" element={<Analytics />} />
             <Route path="settings" element={<Settings />} />
           </Route>
-          <Route path="survey/:slug" element={<PublicSurvey />} />
+          <Route
+            path="survey/:slug"
+            element={
+              <ErrorBoundary>
+                <PublicSurvey />
+              </ErrorBoundary>
+            }
+          />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>

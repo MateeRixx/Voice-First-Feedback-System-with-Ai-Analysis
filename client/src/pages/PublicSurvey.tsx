@@ -125,6 +125,41 @@ export default function PublicSurvey() {
             )}
           </div>
 
+          {survey.description && (
+            <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-4 space-y-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Concept</p>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap">{survey.description}</p>
+            </div>
+          )}
+
+          {survey.media && survey.media.length > 0 && (
+            <div className="space-y-3">
+              {survey.media.map((item, i) => (
+                <div key={i} className="overflow-hidden rounded-lg border">
+                  {item.type === "image" ? (
+                    <img
+                      src={item.url}
+                      alt={item.caption ?? ""}
+                      className="w-full max-h-64 object-cover"
+                    />
+                  ) : (
+                    <video
+                      src={item.url}
+                      controls
+                      className="w-full max-h-64"
+                      preload="metadata"
+                    />
+                  )}
+                  {item.caption && (
+                    <p className="px-3 py-2 text-xs text-muted-foreground bg-card border-t">
+                      {item.caption}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
           {(() => {
             const theme = (survey?.theme as Record<string, unknown>) ?? {}
             const welcome = theme.welcomeMessage as string | undefined

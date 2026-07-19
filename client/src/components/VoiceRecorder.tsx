@@ -158,37 +158,46 @@ export default function VoiceRecorder({
   }
 
   async function handleSubmit() {
-    if (!audioUrl) return
+    if (!audioUrl && !textFeedback.trim()) return
     setState("uploading")
 
     try {
-      const audioBlob = await fetch(audioUrl).then((r) => r.blob())
-      const ext = audioBlob.type.includes("mp4") || audioBlob.type.includes("aac") ? "mp4" : "webm"
-      const formData = new FormData()
-      formData.append("file", audioBlob, `recording.${ext}`)
-      formData.append("upload_preset", "truetone-voice")
-      formData.append("folder", "truetone-audio")
+      let submittedAudioUrl: string | undefined
 
-      const uploadRes = await fetch(
-        "https://api.cloudinary.com/v1_1/dujqqwfym/auto/upload",
-        { method: "POST", body: formData }
-      )
+      if (audioUrl) {
+        const audioBlob = await fetch(audioUrl).then((r) => r.blob())
+        const ext = audioBlob.type.includes("mp4") || audioBlob.type.includes("aac") ? "mp4" : "webm"
 
-      if (!uploadRes.ok) {
-        const err = await uploadRes.json().catch(() => ({}))
-        throw new Error((err as { error?: { message?: string } }).error?.message ?? "Upload failed")
+        const sig = await api.public.getUploadSignature(slug)
+        const formData = new FormData()
+        formData.append("file", audioBlob, `recording.${ext}`)
+        formData.append("folder", sig.folder)
+        formData.append("timestamp", String(sig.timestamp))
+        formData.append("signature", sig.signature)
+        formData.append("api_key", sig.apiKey)
+
+        const uploadRes = await fetch(
+          `https://api.cloudinary.com/v1_1/${sig.cloudName}/auto/upload`,
+          { method: "POST", body: formData }
+        )
+
+        if (!uploadRes.ok) {
+          const err = await uploadRes.json().catch(() => ({}))
+          throw new Error((err as { error?: { message?: string } }).error?.message ?? "Upload failed")
+        }
+
+        const uploadData = (await uploadRes.json()) as { secure_url: string; bytes: number }
+        submittedAudioUrl = uploadData.secure_url
       }
 
-      const uploadData = (await uploadRes.json()) as { secure_url: string }
-      const audioUrl_ = uploadData.secure_url
-
       await api.public.submitResponse(slug, {
-        audioUrl: audioUrl_,
-        durationSec: duration,
+        audioUrl: submittedAudioUrl,
+        durationSec: audioUrl ? duration : undefined,
+        sizeBytes: audioUrl ? undefined : undefined,
         textFeedback: textFeedback.trim() || undefined,
       })
 
-      URL.revokeObjectURL(audioUrl)
+      if (audioUrl) URL.revokeObjectURL(audioUrl)
       setState("done")
       toast.success("Response submitted successfully")
       onComplete()
@@ -232,13 +241,14 @@ export default function VoiceRecorder({
         <span className="text-sm text-muted-foreground"> / {fmt(voiceDurationLimitSec)}</span>
       </div>
 
-      {state === "stopped" && audioUrl && textFeedbackEnabled && (
+      {textFeedbackEnabled && (
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground">
+          <label htmlFor="text-feedback" className="text-xs font-medium text-muted-foreground">
             <MessageSquareText className="mr-1 inline h-3 w-3" />
-            Add written feedback (optional)
+            Written feedback {state === "idle" ? "" : "(optional)"}
           </label>
           <textarea
+            id="text-feedback"
             value={textFeedback}
             onChange={(e) => setTextFeedback(e.target.value)}
             placeholder="Type your thoughts..."
@@ -250,10 +260,18 @@ export default function VoiceRecorder({
 
       <div className="flex flex-wrap justify-center gap-2">
         {state === "idle" && (
-          <Button onClick={startRecording} className="gap-2" size="lg">
-            <Mic className="h-4 w-4" />
-            Start Recording
-          </Button>
+          <>
+            <Button onClick={startRecording} className="gap-2" size="lg">
+              <Mic className="h-4 w-4" />
+              Start Recording
+            </Button>
+            {textFeedbackEnabled && textFeedback.trim() && (
+              <Button onClick={handleSubmit} variant="secondary" className="gap-2" size="lg">
+                <Upload className="h-4 w-4" />
+                Submit Text
+              </Button>
+            )}
+          </>
         )}
 
         {state === "requesting-mic" && (

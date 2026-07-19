@@ -1,6 +1,6 @@
 import { prisma } from "../lib/prisma";
 import { generateUploadSignature } from "../lib/cloudinary";
-import { processResponse } from "../lib/process-response";
+import { enqueueProcessResponse } from "../lib/job-queue";
 import type { Request, Response } from "express";
 
 export async function getSurveyBySlug(req: Request, res: Response) {
@@ -24,10 +24,12 @@ export async function getSurveyBySlug(req: Request, res: Response) {
         id: survey.id,
         title: survey.title,
         subtitle: survey.subtitle,
+        description: survey.description,
         orgName: survey.organization.name,
         voiceDurationLimitSec: survey.voiceDurationLimitSec,
         textFeedbackEnabled: survey.textFeedbackEnabled,
         theme: survey.theme,
+        media: survey.media,
         responseCount: survey._count.responses,
       },
     });
@@ -37,8 +39,17 @@ export async function getSurveyBySlug(req: Request, res: Response) {
   }
 }
 
-export async function getUploadSignature(_req: Request, res: Response) {
+export async function getUploadSignature(req: Request, res: Response) {
   try {
+    const { slug } = req.params;
+    const survey = await prisma.survey.findUnique({
+      where: { slug },
+      select: { id: true, status: true },
+    });
+    if (!survey || survey.status !== "PUBLISHED") {
+      return res.status(404).json({ error: "Survey not found" });
+    }
+
     const sig = generateUploadSignature();
     res.json(sig);
   } catch (error) {
@@ -50,11 +61,7 @@ export async function getUploadSignature(_req: Request, res: Response) {
 export async function submitResponse(req: Request, res: Response) {
   try {
     const { slug } = req.params;
-    const { audioUrl, durationSec, textFeedback } = req.body;
-
-    if (!audioUrl) {
-      return res.status(400).json({ error: "audioUrl is required" });
-    }
+    const { audioUrl, durationSec, textFeedback, sizeBytes } = req.body;
 
     const survey = await prisma.survey.findUnique({
       where: { slug },
@@ -62,6 +69,10 @@ export async function submitResponse(req: Request, res: Response) {
 
     if (!survey || survey.status !== "PUBLISHED") {
       return res.status(404).json({ error: "Survey not found" });
+    }
+
+    if (!audioUrl && !textFeedback) {
+      return res.status(400).json({ error: "Either audioUrl or textFeedback is required" });
     }
 
     const response = await prisma.surveyResponse.create({
@@ -72,25 +83,25 @@ export async function submitResponse(req: Request, res: Response) {
         respondentMeta: {
           userAgent: req.headers["user-agent"] ?? null,
         },
-        attachment: {
-          create: {
-            storageKey: `truetone-audio/${survey.slug}/${Date.now()}.webm`,
-            mimeType: "audio/webm",
-            sizeBytes: 0,
-            r2Url: audioUrl,
+        ...(audioUrl ? {
+          attachment: {
+            create: {
+              storageKey: `truetone-audio/${survey.slug}/${Date.now()}.webm`,
+              mimeType: "audio/webm",
+              sizeBytes: sizeBytes ?? 0,
+              r2Url: audioUrl,
+            },
           },
-        },
+        } : {}),
       },
       include: {
         attachment: true,
       },
     });
 
-    // Respond immediately — process audio in background
+    // Enqueue for background processing
+    await enqueueProcessResponse(response.id)
     res.status(201).json({ response: { id: response.id } });
-    processResponse(response.id).catch((err) => {
-      console.error(`Auto-process failed for ${response.id}:`, err);
-    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to submit response" });

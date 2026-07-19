@@ -24,6 +24,17 @@ export default function WaveformPlayer({
   const wavesurferRef = useRef<WaveSurfer | null>(null)
   const [loaded, setLoaded] = useState(false)
 
+  const onPlayRef = useRef(onPlay)
+  const onPauseRef = useRef(onPause)
+  const onFinishRef = useRef(onFinish)
+  const onReadyRef = useRef(onReady)
+  const onTimeUpdateRef = useRef(onTimeUpdate)
+  onPlayRef.current = onPlay
+  onPauseRef.current = onPause
+  onFinishRef.current = onFinish
+  onReadyRef.current = onReady
+  onTimeUpdateRef.current = onTimeUpdate
+
   useEffect(() => {
     if (!containerRef.current || !audioUrl) return
 
@@ -49,16 +60,16 @@ export default function WaveformPlayer({
 
     ws.on("ready", () => {
       setLoaded(true)
-      onReady()
+      onReadyRef.current()
     })
 
-    ws.on("play", () => onPlay())
-    ws.on("pause", () => onPause())
-    ws.on("finish", () => onFinish())
+    ws.on("play", () => onPlayRef.current())
+    ws.on("pause", () => onPauseRef.current())
+    ws.on("finish", () => onFinishRef.current())
 
     ws.on("timeupdate", (currentTime) => {
       const duration = ws.getDuration()
-      onTimeUpdate(currentTime, duration)
+      onTimeUpdateRef.current(currentTime, duration)
     })
 
     ws.load(audioUrl)
@@ -68,7 +79,7 @@ export default function WaveformPlayer({
       wavesurferRef.current = null
       setLoaded(false)
     }
-  }, [audioUrl]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [audioUrl])
 
   useEffect(() => {
     if (!wavesurferRef.current || !loaded) return

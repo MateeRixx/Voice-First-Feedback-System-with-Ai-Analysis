@@ -1,89 +1,58 @@
-// is file ka  kaam hai registration karwana user ka 
-import {prisma} from "../lib/prisma"
+import { prisma } from "../lib/prisma"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
+import type { Request, Response } from "express"
 
-
-// function jo user ko register karne main help karega 
-
-
-// function to hash password :
-
-async function securePassword(plainTextPassword) {
-    
-    const saltRounds = 12; 
-    
-    // Automatically generates a random salt and returns the encrypted string
-    const hashedPassword = await bcrypt.hash(plainTextPassword, saltRounds);
-    
-    return hashedPassword;
+async function securePassword(plainTextPassword: string) {
+    const saltRounds = 12;
+    return bcrypt.hash(plainTextPassword, saltRounds);
 }
 
-async function register(req , res)
-{
-    try{
-        const email=req.body.email;
-        const password=req.body.password;
-        const orgName=req.body.orgName;
+async function register(req: Request, res: Response) {
+    try {
+        const { email, password, orgName } = req.body;
 
-        const existingUser= await prisma.user.findUnique({ where: { email } })
-
-        // agar user mille toh error do 
-
-        if(existingUser){
-            
-            return res.status(400).json({ error: "Email already exists" })
+        if (!email || !password || !orgName) {
+            return res.status(400).json({ error: "Email, password, and organization name are required" });
         }
-        
-        //hasinh our password 
+        if (password.length < 8) {
+            return res.status(400).json({ error: "Password must be at least 8 characters" });
+        }
 
-        const hashedPassword=await securePassword(password);
+        const existingUser = await prisma.user.findUnique({ where: { email } });
+        if (existingUser) {
+            return res.status(400).json({ error: "Email already exists" });
+        }
 
-        // transaction organization or user create 
+        const hashedPassword = await securePassword(password);
 
         const result = await prisma.$transaction(async (tx) => {
-  const org = await tx.organization.create({
-    data: { name: orgName, slug: orgName.toLowerCase().replace(/\s+/g, "-") }
-  });
-  
-  const user = await tx.user.create({
-    data: { email, passwordHash: hashedPassword, orgId: org.id }
-  });
-  
-  return { org, user };
-});
+            const org = await tx.organization.create({
+                data: { name: orgName, slug: orgName.toLowerCase().replace(/\s+/g, "-") }
+            });
+            const user = await tx.user.create({
+                data: { email, passwordHash: hashedPassword, orgId: org.id }
+            });
+            return { org, user };
+        });
 
-// jwt sign 
+        const token = jwt.sign(
+            { userId: result.user.id, orgId: result.org.id, role: result.user.role },
+            process.env.JWT_SECRET!,
+            { expiresIn: "7d" }
+        );
 
-
-    const token = jwt.sign(
-  { userId: result.user.id, orgId: result.org.id, role: result.user.role },
-  process.env.JWT_SECRET!,
-  { expiresIn: "7d" }
-);
-
-
-//sending respose 
-
-res.json({
-  token,
-  user: { id: result.user.id, email: result.user.email, role: result.user.role, orgId: result.org.id }
-});
-
-        
-
-        
+        res.json({
+            token,
+            user: { id: result.user.id, email: result.user.email, role: result.user.role, orgId: result.org.id }
+        });
+    } catch (error) {
+        console.error("Registration failed:", error);
+        res.status(500).json({ error: "Registration failed" });
     }
-
-    catch(error){
-        console.error(error);
-        res.status(500).json({error:"Registration failed"});
-    }
-
-
 }
 
-async function login(req, res) {
+async function login(req: Request, res: Response) {
   try {
     const { email, password } = req.body;
 
@@ -118,7 +87,7 @@ async function login(req, res) {
   }
 }
 
-async function logout(req, res) {
+async function logout(req: Request, res: Response) {
   try {
     res.json({ message: "Logged out successfully" });
   } catch (error) {

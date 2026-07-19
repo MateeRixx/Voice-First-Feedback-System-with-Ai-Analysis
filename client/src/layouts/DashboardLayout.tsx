@@ -53,7 +53,6 @@ export default function DashboardLayout() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Mobile overlay */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/50 lg:hidden"
@@ -61,14 +60,12 @@ export default function DashboardLayout() {
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r bg-sidebar transition-transform duration-200 lg:static lg:translate-x-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        {/* Logo */}
         <div className="flex h-14 items-center gap-2 px-6">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <MicVocal className="h-4 w-4 text-primary-foreground" />
@@ -78,7 +75,6 @@ export default function DashboardLayout() {
 
         <Separator />
 
-        {/* Nav */}
         <nav className="flex-1 space-y-1 p-3">
           {navItems.map((item) => {
             const active = location.pathname === item.path
@@ -114,7 +110,6 @@ export default function DashboardLayout() {
           })}
         </nav>
 
-        {/* Bottom */}
         <Separator />
         <div className="p-3 space-y-2">
           <div className="flex items-center justify-between px-3 py-2">
@@ -146,15 +141,14 @@ export default function DashboardLayout() {
         </div>
       </aside>
 
-      {/* Main content */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Top bar for mobile */}
         <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:hidden">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setSidebarOpen(true)}
             className="text-muted-foreground"
+            aria-label="Open navigation menu"
           >
             <Menu className="h-5 w-5" />
           </Button>
@@ -166,9 +160,10 @@ export default function DashboardLayout() {
           </div>
         </header>
 
-        {/* Page content */}
         <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-          <Outlet />
+          <div key={location.key} className="animate-in fade-in-0 duration-200">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

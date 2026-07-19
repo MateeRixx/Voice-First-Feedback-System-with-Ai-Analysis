@@ -11,21 +11,21 @@ import {
   processSingleResponse,
   getSurveyAnalysis,
   deleteResponse,
+  deleteSurvey,
 } from "../controllers/survey";
 
-const router = Router();
+export const surveyRouter = Router();
 
-router.use(requireAuth);
+surveyRouter.use(requireAuth);
 
-router.get("/", list);
-router.get("/:id", getById);
-router.post("/", create);
-router.patch("/:id", update);
-router.post("/:id/publish", publishSurvey);
-router.post("/:id/unpublish", unpublishSurvey);
-router.get("/:surveyId/responses", listResponses);
-router.post("/:surveyId/responses/:responseId/process", processSingleResponse);
-router.get("/:surveyId/analysis", getSurveyAnalysis);
-router.delete("/:surveyId/responses/:responseId", deleteResponse);
-
-export default router;
+surveyRouter.get("/", list);
+surveyRouter.get("/:id", getById);
+surveyRouter.post("/", create);
+surveyRouter.patch("/:id", update);
+surveyRouter.post("/:id/publish", publishSurvey);
+surveyRouter.post("/:id/unpublish", unpublishSurvey);
+surveyRouter.get("/:surveyId/responses", listResponses);
+surveyRouter.post("/:surveyId/responses/:responseId/process", processSingleResponse);
+surveyRouter.get("/:surveyId/analysis", getSurveyAnalysis);
+surveyRouter.delete("/:surveyId/responses/:responseId", deleteResponse);
+surveyRouter.delete("/:id", deleteSurvey);

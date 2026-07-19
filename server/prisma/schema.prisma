@@ -51,10 +51,13 @@ model Survey {
   orgId                String
   title                String
   subtitle             String?
+  description          String?
   slug                 String       @unique
   voiceDurationLimitSec Int         @default(120)
   theme                Json?
   textFeedbackEnabled  Boolean      @default(false)
+  analysisResult       Json?
+  media                Json?
   status               SurveyStatus @default(DRAFT)
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
