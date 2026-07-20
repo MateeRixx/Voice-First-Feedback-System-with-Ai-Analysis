@@ -84,11 +84,9 @@ export const api = {
 
     getUploadSignature: (slug: string) =>
       request<{
-        timestamp: number
-        signature: string
-        folder: string
         cloudName: string
-        apiKey: string
+        uploadPreset: string
+        folder: string
       }>(`/public/surveys/${slug}/upload-signature`),
 
     submitResponse: (slug: string, data: { audioUrl?: string; durationSec?: number; sizeBytes?: number; textFeedback?: string }) =>

@@ -1,5 +1,5 @@
 import { prisma } from "../lib/prisma";
-import { generateUploadSignature } from "../lib/cloudinary";
+import { getUploadConfig } from "../lib/cloudinary";
 import { enqueueProcessResponse } from "../lib/job-queue";
 import type { Request, Response } from "express";
 
@@ -50,8 +50,8 @@ export async function getUploadSignature(req: Request, res: Response) {
       return res.status(404).json({ error: "Survey not found" });
     }
 
-    const sig = generateUploadSignature();
-    res.json(sig);
+    const config = getUploadConfig();
+    res.json(config);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to generate upload signature" });

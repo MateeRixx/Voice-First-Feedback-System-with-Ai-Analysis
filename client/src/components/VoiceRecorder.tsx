@@ -168,16 +168,14 @@ export default function VoiceRecorder({
         const audioBlob = await fetch(audioUrl).then((r) => r.blob())
         const ext = audioBlob.type.includes("mp4") || audioBlob.type.includes("aac") ? "mp4" : "webm"
 
-        const sig = await api.public.getUploadSignature(slug)
+        const config = await api.public.getUploadSignature(slug)
         const formData = new FormData()
         formData.append("file", audioBlob, `recording.${ext}`)
-        formData.append("folder", sig.folder)
-        formData.append("timestamp", String(sig.timestamp))
-        formData.append("signature", sig.signature)
-        formData.append("api_key", sig.apiKey)
+        formData.append("folder", config.folder)
+        formData.append("upload_preset", config.uploadPreset)
 
         const uploadRes = await fetch(
-          `https://api.cloudinary.com/v1_1/${sig.cloudName}/auto/upload`,
+          `https://api.cloudinary.com/v1_1/${config.cloudName}/auto/upload`,
           { method: "POST", body: formData }
         )
 

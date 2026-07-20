@@ -2,7 +2,7 @@ import "dotenv/config";
 
 const API_KEY = process.env.OPEN_ROUTER_API || "";
 const BASE = "https://openrouter.ai/api/v1";
-const MODEL = "openrouter/free";
+const MODEL = "mistralai/mistral-small-24b-instruct-2501:free";
 
 async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 60000) {
   const controller = new AbortController();
