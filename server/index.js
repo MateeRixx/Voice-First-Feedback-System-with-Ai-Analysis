@@ -3,8 +3,13 @@ const path = require("path");
 
 const cwd = __dirname;
 
+const migrateUrl = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL;
 try {
-  execSync("npx prisma migrate deploy", { cwd, stdio: "inherit" });
+  execSync("npx prisma migrate deploy", {
+    cwd,
+    stdio: "inherit",
+    env: { ...process.env, DATABASE_URL: migrateUrl },
+  });
 } catch (err) {
   console.error("Migration failed:", err.message);
   process.exit(1);
