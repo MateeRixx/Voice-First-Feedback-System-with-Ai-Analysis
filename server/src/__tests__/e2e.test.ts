@@ -149,12 +149,13 @@ describe("Public Survey", () => {
     expect(r.status).toBe(404)
   })
 
-  it("GET /public/surveys/:slug/upload-signature — returns Cloudinary sig", async () => {
+  it("GET /public/surveys/:slug/upload-signature — returns Cloudinary config", async () => {
     const r = await withAuth(() =>
-      api<{ signature: string; timestamp: number }>(`/public/surveys/${surveySlug}/upload-signature`))
+      api<{ cloudName: string; uploadPreset: string; folder: string }>(`/public/surveys/${surveySlug}/upload-signature`))
     expect(r.status).toBe(200)
-    expect(r.body.signature).toBeTruthy()
-    expect(r.body.timestamp).toBeTruthy()
+    expect(r.body.cloudName).toBeTruthy()
+    expect(r.body.uploadPreset).toBe("truetone-voice")
+    expect(r.body.folder).toBe("truetone-audio")
   })
 
   it("POST /public/surveys/:slug/responses — creates response", async () => {
