@@ -32,7 +32,11 @@ describe("Auth", () => {
   it("POST /auth/register — creates org + user", async () => {
     const r = await api<{ token: string; user: { email: string } }>("/auth/register", {
       method: "POST",
-      body: JSON.stringify({ email: testEmail, password: testPassword, orgName: testOrg }),
+      body: JSON.stringify({
+        email: testEmail, password: testPassword, orgName: testOrg,
+        securityQuestion: "What was the name of your first pet?",
+        securityAnswer: "Fluffy",
+      }),
     })
     expect(r.status).toBe(200)
     expect(r.body.token).toBeTruthy()
@@ -43,7 +47,11 @@ describe("Auth", () => {
   it("POST /auth/register — rejects duplicate email", async () => {
     const r = await api("/auth/register", {
       method: "POST",
-      body: JSON.stringify({ email: testEmail, password: testPassword, orgName: testOrg }),
+      body: JSON.stringify({
+        email: testEmail, password: testPassword, orgName: testOrg,
+        securityQuestion: "What was the name of your first pet?",
+        securityAnswer: "Fluffy",
+      }),
     })
     expect(r.status).toBe(400)
   })

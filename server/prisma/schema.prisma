@@ -28,8 +28,8 @@ model User {
   orgId        String
   email        String   @unique
   passwordHash      String
-  securityQuestion  String?
-  securityAnswer    String?
+  securityQuestion  String
+  securityAnswer    String
   role              Role     @default(OWNER)
   createdAt         DateTime @default(now())
   organization      Organization @relation(fields: [orgId], references: [id])
