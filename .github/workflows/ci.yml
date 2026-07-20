@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install server deps
+        working-directory: ./server
+        run: npm ci
+
+      - name: Prisma generate
+        working-directory: ./server
+        run: npx prisma generate
+
+      - name: Typecheck server
+        working-directory: ./server
+        run: npx tsc --noEmit
+
+      - name: Install client deps
+        working-directory: ./client
+        run: npm ci
+
+      - name: Typecheck client
+        working-directory: ./client
+        run: npx tsc --noEmit
+
+      - name: Build client
+        working-directory: ./client
+        run: npm run build
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: truetone_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install server deps
+        working-directory: ./server
+        run: npm ci
+
+      - name: Prisma generate
+        working-directory: ./server
+        run: npx prisma generate
+
+      - name: Run migrations
+        working-directory: ./server
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://postgres:test@localhost:5432/truetone_test
+
+      - name: Run tests
+        working-directory: ./server
+        run: npm test
+        env:
+          DATABASE_URL: postgresql://postgres:test@localhost:5432/truetone_test
+          JWT_SECRET: test-secret-for-ci
+          CLOUDINARY_CLOUD_NAME: test
+          CLOUDINARY_API_KEY: test
+          CLOUDINARY_API_SECRET: test
+          SARVAM_API: test-key
+          OPEN_ROUTER_API: test-key
