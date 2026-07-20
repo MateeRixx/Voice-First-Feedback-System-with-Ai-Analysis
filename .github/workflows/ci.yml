@@ -22,6 +22,8 @@ jobs:
       - name: Prisma generate
         working-directory: ./server
         run: npx prisma generate
+        env:
+          DATABASE_URL: postgresql://postgres:test@localhost:5432/truetone_test
 
       - name: Typecheck server
         working-directory: ./server
@@ -69,6 +71,8 @@ jobs:
       - name: Prisma generate
         working-directory: ./server
         run: npx prisma generate
+        env:
+          DATABASE_URL: postgresql://postgres:test@localhost:5432/truetone_test
 
       - name: Run migrations
         working-directory: ./server
@@ -78,7 +82,20 @@ jobs:
 
       - name: Run tests
         working-directory: ./server
-        run: npm test
+        run: |
+          npx tsx src/index.ts &
+          SERVER_PID=$!
+          for i in $(seq 1 15); do
+            if curl -s http://127.0.0.1:3000/api > /dev/null 2>&1; then
+              echo "Server ready"
+              break
+            fi
+            sleep 2
+          done
+          npx vitest run
+          EXIT_CODE=$?
+          kill $SERVER_PID 2>/dev/null || true
+          exit $EXIT_CODE
         env:
           DATABASE_URL: postgresql://postgres:test@localhost:5432/truetone_test
           JWT_SECRET: test-secret-for-ci
