@@ -93,8 +93,8 @@ export default function ShareSurveyModal({ open, onOpenChange, surveySlug, surve
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-sm:max-w-[calc(100%-2rem)] max-h-[85vh] overflow-y-auto overflow-x-hidden">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+        <DialogHeader className="text-center sm:text-center">
+          <DialogTitle className="items-center gap-2 justify-center">
             <QrCode className="h-5 w-5" />
             Share &ldquo;{surveyTitle}&rdquo;
           </DialogTitle>
