@@ -203,7 +203,7 @@ export default function Surveys() {
                   </span>
                 </div>
                 <Separator className="my-3" />
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 overflow-x-auto pb-1">
                   <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => navigate(`/dashboard/surveys/${survey.id}/responses`)}>
                     <Eye className="h-3.5 w-3.5" />
                     Responses
