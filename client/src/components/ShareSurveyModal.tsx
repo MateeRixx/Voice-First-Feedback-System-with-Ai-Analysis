@@ -92,25 +92,22 @@ export default function ShareSurveyModal({ open, onOpenChange, surveySlug, surve
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-sm:max-w-[calc(100%-2rem)] max-h-[85vh] overflow-y-auto overflow-x-hidden">
+      <DialogContent className="sm:max-w-md w-[calc(100%-2rem)]">
         <DialogHeader className="text-center sm:text-center">
           <DialogTitle className="items-center gap-2 justify-center">
             <QrCode className="h-5 w-5" />
             Share &ldquo;{surveyTitle}&rdquo;
           </DialogTitle>
-          <DialogDescription>
-            Share this survey link with your customers to collect voice feedback.
-          </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col items-center gap-3">
-          <div className="rounded-lg border p-2 bg-white w-fit">
+        <div className="flex flex-col items-center gap-2">
+          <div className="rounded-lg border p-1.5 bg-white">
             {qrLoading ? (
-              <div className="flex items-center justify-center w-[180px] h-[180px]">
+              <div className="flex items-center justify-center w-[140px] h-[140px]">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : qrError ? (
-              <div className="flex flex-col items-center justify-center w-[180px] h-[180px] text-muted-foreground gap-2">
+              <div className="flex flex-col items-center justify-center w-[140px] h-[140px] text-muted-foreground gap-2">
                 <AlertCircle className="h-8 w-8 text-destructive" />
                 <span className="text-xs text-center">Failed to generate QR</span>
               </div>
@@ -118,31 +115,28 @@ export default function ShareSurveyModal({ open, onOpenChange, surveySlug, surve
               <img
                 src={qrDataUrl}
                 alt={`QR code for ${surveyTitle}`}
-                width={180}
-                height={180}
-                className="rounded max-w-full h-auto"
+                width={140}
+                height={140}
+                className="rounded"
               />
             )}
           </div>
           {!qrLoading && !qrError && (
-            <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={handleDownload}>
-              <Download className="h-3.5 w-3.5" />
-              Download as PNG
+            <Button variant="ghost" size="sm" className="gap-1.5 text-xs h-7" onClick={handleDownload}>
+              <Download className="h-3 w-3" />
+              Download
             </Button>
           )}
-          <p className="text-xs text-muted-foreground text-center">
-            Customers scan this QR code to open the survey on their phone
-          </p>
         </div>
 
-        <div className="space-y-2">
-          <Button variant="outline" className="justify-start gap-3 w-full min-w-0" onClick={handleCopyLink}>
-            {copied ? <Check className="h-4 w-4 shrink-0 text-green-500" /> : <Copy className="h-4 w-4 shrink-0" />}
-            <span className="flex-1 text-left truncate text-xs min-w-0">{surveyUrl}</span>
+        <div className="space-y-1.5">
+          <Button variant="outline" className="justify-start gap-2 w-full h-9 text-xs" onClick={handleCopyLink}>
+            {copied ? <Check className="h-3.5 w-3.5 shrink-0 text-green-500" /> : <Copy className="h-3.5 w-3.5 shrink-0" />}
+            <span className="flex-1 text-left truncate">{surveyUrl}</span>
           </Button>
-          <Button variant="secondary" className="gap-2 w-full" onClick={() => { window.open(`mailto:?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`) }}>
-            <Mail className="h-4 w-4 shrink-0" />
-            <span>Share via Email</span>
+          <Button variant="secondary" className="gap-2 w-full h-9 text-xs" onClick={() => { window.open(`mailto:?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`) }}>
+            <Mail className="h-3.5 w-3.5 shrink-0" />
+            Share via Email
           </Button>
         </div>
       </DialogContent>
