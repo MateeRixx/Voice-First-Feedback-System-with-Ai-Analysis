@@ -23,6 +23,9 @@ vite.config.js
 *.log
 npm-debug.log*
 
+# Temp release-locks script
+server/.release-locks.mjs
+
 # OS files
 .DS_Store
 Thumbs.db
