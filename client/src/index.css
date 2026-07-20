@@ -161,6 +161,10 @@
   100% { background-position: 0% 50%; }
 }
 
+@keyframes ripple-ring {
+  0% { transform: scale(0.8); opacity: 0.6; }
+  100% { transform: scale(2.8); opacity: 0; }
+}
 .animate-waveform { animation: waveform 2.4s ease-in-out infinite; }
 .animate-float-slow { animation: float-slow 4s ease-in-out infinite; }
 .animate-float-medium { animation: float-medium 3s ease-in-out infinite; }

@@ -100,7 +100,7 @@ export default function ShareSurveyModal({ open, onOpenChange, surveySlug, surve
         </DialogHeader>
 
         <div className="flex flex-col items-center gap-2">
-          <div className="rounded-lg border p-1.5 bg-white">
+          <div className="rounded-lg border p-1.5 bg-background">
             {qrLoading ? (
               <div className="flex items-center justify-center w-[140px] h-[140px]">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -128,10 +128,10 @@ export default function ShareSurveyModal({ open, onOpenChange, surveySlug, surve
           )}
         </div>
 
-        <div className="space-y-1.5">
-          <Button variant="outline" className="justify-start gap-2 w-full h-9 text-xs" onClick={handleCopyLink}>
+        <div className="space-y-1.5 min-w-0">
+          <Button variant="outline" className="justify-start gap-2 w-full h-auto min-h-9 text-xs px-3 py-2" onClick={handleCopyLink}>
             {copied ? <Check className="h-3.5 w-3.5 shrink-0 text-green-500" /> : <Copy className="h-3.5 w-3.5 shrink-0" />}
-            <span className="flex-1 text-left truncate">{surveyUrl}</span>
+            <span className="flex-1 text-left truncate break-all">{surveyUrl}</span>
           </Button>
           <Button variant="secondary" className="gap-2 w-full h-9 text-xs" onClick={() => { window.open(`mailto:?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`) }}>
             <Mail className="h-3.5 w-3.5 shrink-0" />

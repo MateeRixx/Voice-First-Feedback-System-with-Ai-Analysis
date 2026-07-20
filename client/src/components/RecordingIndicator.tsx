@@ -17,12 +17,7 @@ export default function RecordingIndicator() {
         />
       ))}
 
-      <style>{`
-        @keyframes ripple-ring {
-          0% { transform: scale(0.8); opacity: 0.6; }
-          100% { transform: scale(2.8); opacity: 0; }
-        }
-      `}</style>
+
     </div>
   )
 }

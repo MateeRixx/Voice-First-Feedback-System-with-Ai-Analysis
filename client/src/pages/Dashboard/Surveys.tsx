@@ -23,7 +23,6 @@ import {
   GlobeOff,
   Share2,
   FileText,
-  Pencil,
   Trash2,
 } from "lucide-react"
 
@@ -232,15 +231,7 @@ export default function Surveys() {
                     <Copy className="h-3.5 w-3.5" />
                     Copy link
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5 text-xs"
-                    onClick={() => navigate(`/dashboard/surveys/${survey.id}/responses`)}
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                    Edit
-                  </Button>
+
                   <Button
                     variant="outline"
                     size="sm"

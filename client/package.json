@@ -33,6 +33,7 @@
     "react-router-dom": "^7.18.1",
     "recharts": "^3.9.2",
     "tailwind-merge": "^3.6.0",
+    "tailwindcss-animate": "^1.0.7",
     "wavesurfer.js": "^7.12.11",
     "zod": "^4.4.3"
   },
