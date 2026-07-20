@@ -13,7 +13,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
@@ -30,6 +29,7 @@
     "pg": "^8.22.0",
     "pg-boss": "^12.26.1",
     "prisma": "^7.8.0",
+    "sarvamai": "^1.1.7",
     "zod": "^4.4.3"
   },
   "devDependencies": {
