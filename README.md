@@ -61,8 +61,7 @@ TrueTone ek aisa system hai jo **bolke diya gaya feedback** ko automatically act
 ## 🖥️ See It In Action
 
 <div align="center">
-<img src="https://res.cloudinary.com/dujqqwfym/image/upload/v1784550904/Screenshot_2026-07-20_180451_jajtgg.png" width="80%" alt="dashboard screenshot placeholder"/>
-<br/><i>Replace with a real dashboard screenshot or a short GIF walkthrough — this is the single highest-impact addition you can make to this README.</i>
+<img src="https://res.cloudinary.com/dujqqwfym/image/upload/v1784550904/Screenshot_2026-07-20_180451_jajtgg.png" width="80%" alt="TrueTone dashboard screenshot"/>
 </div>
 
 <br/>
