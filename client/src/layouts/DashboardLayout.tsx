@@ -62,7 +62,7 @@ export default function DashboardLayout() {
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r bg-sidebar transition-transform duration-200 lg:static lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r bg-sidebar transition-transform duration-200 lg:static lg:translate-x-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -111,14 +111,14 @@ export default function DashboardLayout() {
         </nav>
 
         <Separator />
-        <div className="p-3 space-y-2">
-          <div className="flex items-center justify-between px-3 py-2">
+        <div className="p-4 space-y-2">
+          <div className="flex items-center justify-between px-1 py-2">
             <span className="text-xs font-medium text-sidebar-foreground/50">Theme</span>
             <ThemeToggle />
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+              <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
                 <Avatar className="h-7 w-7">
                   <AvatarFallback className="text-xs bg-primary/10 text-primary">
                     {initials}
