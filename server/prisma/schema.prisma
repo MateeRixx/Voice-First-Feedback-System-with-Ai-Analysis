@@ -27,10 +27,12 @@ model User {
   id           String   @id @default(cuid())
   orgId        String
   email        String   @unique
-  passwordHash String
-  role         Role     @default(OWNER)
-  createdAt    DateTime @default(now())
-  organization Organization @relation(fields: [orgId], references: [id])
+  passwordHash      String
+  securityQuestion  String?
+  securityAnswer    String?
+  role              Role     @default(OWNER)
+  createdAt         DateTime @default(now())
+  organization      Organization @relation(fields: [orgId], references: [id])
 }
 
 enum Role {

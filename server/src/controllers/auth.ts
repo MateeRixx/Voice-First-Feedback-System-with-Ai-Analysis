@@ -8,12 +8,27 @@ async function securePassword(plainTextPassword: string) {
     return bcrypt.hash(plainTextPassword, saltRounds);
 }
 
+const SECURITY_QUESTIONS = [
+  "What was the name of your first pet?",
+  "What city were you born in?",
+  "What is your mother's maiden name?",
+  "What was the name of your elementary school?",
+  "What is your favorite book?",
+  "What is your favorite food?",
+] as const;
+
 async function register(req: Request, res: Response) {
     try {
-        const { email, password, orgName } = req.body;
+        const { email, password, orgName, securityQuestion, securityAnswer } = req.body;
 
-        if (!email || !password || !orgName) {
-            return res.status(400).json({ error: "Email, password, and organization name are required" });
+        if (!email || !password || !orgName || !securityQuestion || !securityAnswer) {
+            return res.status(400).json({ error: "Email, password, organization name, security question, and answer are required" });
+        }
+        if (!SECURITY_QUESTIONS.includes(securityQuestion)) {
+            return res.status(400).json({ error: "Invalid security question" });
+        }
+        if (securityAnswer.length < 2) {
+            return res.status(400).json({ error: "Security answer must be at least 2 characters" });
         }
         if (password.length < 8) {
             return res.status(400).json({ error: "Password must be at least 8 characters" });
@@ -24,14 +39,17 @@ async function register(req: Request, res: Response) {
             return res.status(400).json({ error: "Email already exists" });
         }
 
-        const hashedPassword = await securePassword(password);
+        const [hashedPassword, hashedAnswer] = await Promise.all([
+            securePassword(password),
+            securePassword(securityAnswer.toLowerCase().trim()),
+        ]);
 
         const result = await prisma.$transaction(async (tx) => {
             const org = await tx.organization.create({
                 data: { name: orgName, slug: orgName.toLowerCase().replace(/\s+/g, "-") }
             });
             const user = await tx.user.create({
-                data: { email, passwordHash: hashedPassword, orgId: org.id }
+                data: { email, passwordHash: hashedPassword, securityQuestion, securityAnswer: hashedAnswer, orgId: org.id }
             });
             return { org, user };
         });
@@ -96,4 +114,61 @@ async function logout(req: Request, res: Response) {
   }
 }
 
-export { register, login, logout };
+async function getSecurityQuestion(req: Request, res: Response) {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { securityQuestion: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "No account found with this email" });
+    }
+
+    res.json({ question: user.securityQuestion });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to get security question" });
+  }
+}
+
+async function resetPassword(req: Request, res: Response) {
+  try {
+    const { email, securityAnswer, newPassword } = req.body;
+
+    if (!email || !securityAnswer || !newPassword) {
+      return res.status(400).json({ error: "Email, security answer, and new password are required" });
+    }
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: "Password must be at least 8 characters" });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ error: "No account found with this email" });
+    }
+
+    const valid = await bcrypt.compare(securityAnswer.toLowerCase().trim(), user.securityAnswer);
+    if (!valid) {
+      return res.status(401).json({ error: "Incorrect security answer" });
+    }
+
+    const hashedPassword = await securePassword(newPassword);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: hashedPassword },
+    });
+
+    res.json({ message: "Password reset successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to reset password" });
+  }
+}
+
+export { register, login, logout, getSecurityQuestion, resetPassword, SECURITY_QUESTIONS };

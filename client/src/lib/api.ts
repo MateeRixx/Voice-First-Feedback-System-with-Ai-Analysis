@@ -57,13 +57,23 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ email, password }),
     }),
-  register: (email: string, password: string, orgName: string) =>
+  register: (email: string, password: string, orgName: string, securityQuestion: string, securityAnswer: string) =>
     request<AuthResponse>("/auth/register", {
       method: "POST",
-      body: JSON.stringify({ email, password, orgName }),
+      body: JSON.stringify({ email, password, orgName, securityQuestion, securityAnswer }),
     }),
   logout: () =>
     request<{ message: string }>("/auth/logout", { method: "POST" }),
+  getSecurityQuestion: (email: string) =>
+    request<{ question: string }>("/auth/security-question", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+  resetPassword: (email: string, securityAnswer: string, newPassword: string) =>
+    request<{ message: string }>("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ email, securityAnswer, newPassword }),
+    }),
 
   public: {
     getSurvey: (slug: string) =>

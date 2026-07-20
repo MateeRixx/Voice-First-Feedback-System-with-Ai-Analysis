@@ -36,8 +36,8 @@ export function useAuth() {
     return res
   }, [])
 
-  const register = useCallback(async (email: string, password: string, orgName: string) => {
-    const res = await api.register(email, password, orgName)
+  const register = useCallback(async (email: string, password: string, orgName: string, securityQuestion: string, securityAnswer: string) => {
+    const res = await api.register(email, password, orgName, securityQuestion, securityAnswer)
     localStorage.setItem("truetone-token", res.token)
     localStorage.setItem("truetone-user", JSON.stringify(res.user))
     setState({ token: res.token, user: res.user, loading: false })

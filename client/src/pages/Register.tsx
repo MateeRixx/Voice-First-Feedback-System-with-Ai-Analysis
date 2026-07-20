@@ -4,8 +4,17 @@ import { useAuth } from "@/hooks/useAuth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { MicVocal, Loader2, Eye, EyeOff, Check, X } from "lucide-react"
+import { MicVocal, Loader2, Eye, EyeOff, Check, X, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
+
+const SECURITY_QUESTIONS = [
+  "What was the name of your first pet?",
+  "What city were you born in?",
+  "What is your mother's maiden name?",
+  "What was the name of your elementary school?",
+  "What is your favorite book?",
+  "What is your favorite food?",
+]
 
 function getStrength(password: string): { score: number; label: string; color: string } {
   let score = 0
@@ -33,6 +42,9 @@ export default function Register() {
   const [orgName, setOrgName] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const [securityQuestion, setSecurityQuestion] = useState("")
+  const [securityAnswer, setSecurityAnswer] = useState("")
+  const [showQuestions, setShowQuestions] = useState(false)
   const { register } = useAuth()
   const navigate = useNavigate()
 
@@ -43,7 +55,7 @@ export default function Register() {
   const meetsNumber = /\d/.test(password)
   const meetsSpecial = /[^a-zA-Z0-9]/.test(password)
   const passwordsMatch = password && confirmPassword && password === confirmPassword
-  const canSubmit = meetsLength && passwordsMatch && !loading
+  const canSubmit = meetsLength && passwordsMatch && securityQuestion && securityAnswer.length >= 2 && !loading
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -56,9 +68,17 @@ export default function Register() {
       setError(`Password must be at least ${MIN_LENGTH} characters`)
       return
     }
+    if (!securityQuestion) {
+      setError("Please select a security question")
+      return
+    }
+    if (securityAnswer.length < 2) {
+      setError("Security answer must be at least 2 characters")
+      return
+    }
     setLoading(true)
     try {
-      await register(email, password, orgName)
+      await register(email, password, orgName, securityQuestion, securityAnswer)
       navigate("/dashboard")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed")
@@ -191,6 +211,55 @@ export default function Register() {
                   {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Security question</Label>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowQuestions((p) => !p)}
+                  className="flex h-10 w-full items-center justify-between rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <span className={securityQuestion ? "" : "text-muted-foreground"}>
+                    {securityQuestion || "Choose a security question"}
+                  </span>
+                  <ChevronDown className={cn("h-4 w-4 transition-transform", showQuestions && "rotate-180")} />
+                </button>
+                {showQuestions && (
+                  <div className="absolute z-10 mt-1 w-full rounded-lg border bg-popover p-1 shadow-md">
+                    {SECURITY_QUESTIONS.map((q) => (
+                      <button
+                        key={q}
+                        type="button"
+                        onClick={() => {
+                          setSecurityQuestion(q)
+                          setShowQuestions(false)
+                        }}
+                        className={cn(
+                          "w-full rounded-md px-3 py-2 text-left text-sm transition-colors",
+                          q === securityQuestion ? "bg-accent font-medium" : "hover:bg-accent"
+                        )}
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="securityAnswer">Security answer</Label>
+              <Input
+                id="securityAnswer"
+                type="text"
+                placeholder="Your answer"
+                value={securityAnswer}
+                onChange={(e) => setSecurityAnswer(e.target.value)}
+                required
+              />
+              <p className="text-xs text-muted-foreground">Used to verify your identity if you forget your password.</p>
             </div>
 
             {password && (
