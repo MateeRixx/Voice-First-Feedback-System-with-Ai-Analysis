@@ -92,7 +92,7 @@ export default function ShareSurveyModal({ open, onOpenChange, surveySlug, surve
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg max-sm:max-w-[calc(100%-2rem)] max-h-[85vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <QrCode className="h-5 w-5" />
@@ -103,14 +103,14 @@ export default function ShareSurveyModal({ open, onOpenChange, surveySlug, surve
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col items-center gap-4 py-2">
-          <div className="rounded-lg border p-3 bg-white">
+        <div className="flex flex-col items-center gap-3">
+          <div className="rounded-lg border p-2 bg-white w-fit">
             {qrLoading ? (
-              <div className="flex items-center justify-center w-[200px] h-[200px]">
+              <div className="flex items-center justify-center w-[180px] h-[180px]">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : qrError ? (
-              <div className="flex flex-col items-center justify-center w-[200px] h-[200px] text-muted-foreground gap-2">
+              <div className="flex flex-col items-center justify-center w-[180px] h-[180px] text-muted-foreground gap-2">
                 <AlertCircle className="h-8 w-8 text-destructive" />
                 <span className="text-xs text-center">Failed to generate QR</span>
               </div>
@@ -118,9 +118,9 @@ export default function ShareSurveyModal({ open, onOpenChange, surveySlug, surve
               <img
                 src={qrDataUrl}
                 alt={`QR code for ${surveyTitle}`}
-                width={QR_SIZE}
-                height={QR_SIZE}
-                className="rounded"
+                width={180}
+                height={180}
+                className="rounded max-w-full h-auto"
               />
             )}
           </div>
@@ -130,15 +130,15 @@ export default function ShareSurveyModal({ open, onOpenChange, surveySlug, surve
               Download as PNG
             </Button>
           )}
-          <p className="text-xs text-muted-foreground text-center max-w-xs">
+          <p className="text-xs text-muted-foreground text-center">
             Customers scan this QR code to open the survey on their phone
           </p>
         </div>
 
         <div className="space-y-2">
-          <Button variant="outline" className="justify-start gap-3 w-full" onClick={handleCopyLink}>
+          <Button variant="outline" className="justify-start gap-3 w-full min-w-0" onClick={handleCopyLink}>
             {copied ? <Check className="h-4 w-4 shrink-0 text-green-500" /> : <Copy className="h-4 w-4 shrink-0" />}
-            <span className="flex-1 text-left truncate text-xs">{surveyUrl}</span>
+            <span className="flex-1 text-left truncate text-xs min-w-0">{surveyUrl}</span>
           </Button>
           <Button variant="secondary" className="gap-2 w-full" onClick={() => { window.open(`mailto:?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`) }}>
             <Mail className="h-4 w-4 shrink-0" />
