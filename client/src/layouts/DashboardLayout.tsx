@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Outlet, useNavigate, useLocation } from "react-router-dom"
 import { useAuth } from "@/hooks/useAuth"
+import { useKeepAlive } from "@/hooks/useKeepAlive"
 import { ThemeToggle } from "@/components/ThemeToggle"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -43,6 +44,8 @@ export default function DashboardLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  useKeepAlive()
 
   function handleLogout() {
     logout()

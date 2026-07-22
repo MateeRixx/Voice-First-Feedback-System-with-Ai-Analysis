@@ -63,7 +63,31 @@ Your cloud: `dujqqwfym` — keep the existing API key + secret.
 3. Set all env vars in Render dashboard
 4. Deploy — first deploy will run migrations via the start command
 
-**Cold start:** Render free tier sleeps after 15 min inactivity. First request after sleep takes ~30s. Mitigate with cron-job.org (free) pinging every 5 min.
+**Cold start:** Render free tier sleeps after 15 min inactivity. First request after sleep takes ~30s. Mitigate with a cron job pinging `https://your-app.onrender.com/api/health` every 5 min.
+
+### Keep Alive Options
+
+#### Option A: cron-job.org (simplest, free, no code)
+
+1. Go to [cron-job.org](https://cron-job.org) → Sign up → Create cron job
+2. **URL:** `https://your-app.onrender.com/api/health`
+3. **Interval:** Every 5 minutes
+4. Save — done. Server will stay awake 24/7.
+
+#### Option B: Render Cron Job (stays in the same project)
+
+1. Render dashboard → New → Cron Job
+2. Connect the same repo
+3. **Root Directory:** `server`
+4. **Command:** `npx tsx scripts/keep-alive.ts`
+5. **Schedule:** `*/5 * * * *`
+6. **Env Var:** `KEEP_ALIVE_URL=https://your-app.onrender.com`
+7. **Plan:** Free
+8. Create — Render will ping your API every 5 minutes.
+
+#### Option C: Frontend Keep-Alive (already implemented)
+
+When any user has the dashboard open, the frontend automatically pings `/api/health` every 5 minutes. This keeps the server warm during active hours without any external service.
 
 ### 4. Frontend — Cloudflare Pages (free)
 
@@ -97,5 +121,6 @@ Your cloud: `dujqqwfym` — keep the existing API key + secret.
 - [ ] `CORS_ORIGIN` set in Render (e.g. `https://truetone.pages.dev`)
 - [ ] `JWT_SECRET` is a fresh random string (not the dev default)
 - [ ] Database migrations ran on first deploy
-- [ ] Cron job set up to prevent Render sleep
+- [ ] Cron job set up to prevent Render sleep (cron-job.org or Render Cron Job)
+- [ ] Frontend keep-alive is active when dashboard is open (no action needed — built-in)
 - [ ] Test a full flow: register → create survey → respond → analyze
