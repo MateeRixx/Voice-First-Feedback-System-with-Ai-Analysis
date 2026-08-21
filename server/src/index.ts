@@ -5,6 +5,8 @@ import morgan from "morgan"
 import cookieParser from "cookie-parser"
 import rateLimit from "express-rate-limit"
 import dotenv from "dotenv"
+import { createServer } from "http"
+import { WebSocketServer } from "ws"
 import { authRouter } from "./routes/auth"
 import { surveyRouter } from "./routes/survey"
 import { dashboardRouter } from "./routes/dashboard"
@@ -12,6 +14,7 @@ import { publicRouter } from "./routes/public"
 import { startQueue } from "./lib/job-queue"
 import { startWorker } from "./lib/worker"
 import { errorHandler } from "./middleware/errorHandler"
+import { responseClients } from "./lib/notify"
 
 dotenv.config()
 
@@ -91,8 +94,35 @@ async function start() {
   }
 }
 
+const httpServer = createServer(app)
+
+const wss = new WebSocketServer({ server: httpServer })
+
+wss.on("connection", (ws, req) => {
+  const url = new URL(req.url || "/", `http://${req.headers.host}`)
+  const pathParts = url.pathname.split("/").filter(Boolean)
+  const responseId = pathParts[pathParts.length - 1]
+
+  if (!responseId) {
+    ws.close()
+    return
+  }
+
+  if (!responseClients.has(responseId)) {
+    responseClients.set(responseId, new Set())
+  }
+  responseClients.get(responseId)!.add(ws)
+
+  ws.on("close", () => {
+    responseClients.get(responseId)?.delete(ws)
+    if (responseClients.get(responseId)?.size === 0) {
+      responseClients.delete(responseId)
+    }
+  })
+})
+
 start().then(() => {
-  app.listen(PORT, "0.0.0.0", () => {
+  httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`listening on 0.0.0.0:${PORT}`)
   })
 })

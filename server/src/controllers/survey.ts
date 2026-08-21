@@ -310,3 +310,58 @@ export async function deleteResponse(req: Request, res: Response) {
     res.status(500).json({ error: "Failed to delete response" });
   }
 }
+
+export async function exportSurveyCSV(req: Request, res: Response) {
+  try {
+    const { orgId } = assertAuth(req);
+    const { surveyId } = req.params;
+
+    const survey = await prisma.survey.findFirst({
+      where: { id: surveyId, orgId },
+    });
+    if (!survey) return res.status(404).json({ error: "Survey not found" });
+
+    const responses = await prisma.surveyResponse.findMany({
+      where: { surveyId, status: "PROCESSED" },
+      orderBy: { createdAt: "desc" },
+      include: {
+        transcript: true,
+        insight: true,
+        attachment: true,
+      },
+    });
+
+    const headers = ["ID", "Date", "Duration (s)", "Sentiment", "Urgency", "Tags", "Summary", "Transcript", "Audio URL"];
+
+    const escape = (val: unknown): string => {
+      const str = val === null || val === undefined
+        ? ""
+        : typeof val === "object"
+          ? JSON.stringify(val)
+          : String(val);
+      return `"${str.replace(/"/g, '""')}"`;
+    };
+
+    const rows = responses.map((r) => [
+      escape(r.id),
+      escape(new Date(r.createdAt).toISOString()),
+      escape(r.durationSec),
+      escape(r.insight?.sentiment ?? ""),
+      escape(r.insight?.urgency ?? ""),
+      escape(r.insight?.tags ?? []),
+      escape(r.insight?.summary ?? ""),
+      escape(r.transcript?.text ?? ""),
+      escape(r.attachment?.r2Url ?? ""),
+    ].join(","));
+
+    const csv = [headers.join(","), ...rows].join("\n");
+    const filename = `${survey.title.replace(/[^a-z0-9]/gi, "_")}_responses.csv`;
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send("\uFEFF" + csv);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to export responses" });
+  }
+}

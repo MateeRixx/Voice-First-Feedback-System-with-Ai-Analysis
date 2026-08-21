@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton"
 import VoiceRecorder from "@/components/VoiceRecorder"
 import AnimatedHero from "@/components/AnimatedHero"
+import ProcessingStatusBar from "@/components/ProcessingStatusBar"
 import {
   Mic,
   Clock,
@@ -22,6 +23,7 @@ export default function PublicSurvey() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [submitted, setSubmitted] = useState(false)
+  const [submittedResponseId, setSubmittedResponseId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!slug) return
@@ -81,6 +83,11 @@ export default function PublicSurvey() {
               <CardDescription>{thankYou}</CardDescription>
             </div>
           </CardHeader>
+          {submittedResponseId && (
+            <CardContent>
+              <ProcessingStatusBar responseId={submittedResponseId} />
+            </CardContent>
+          )}
         </Card>
       </div>
     )
@@ -186,7 +193,10 @@ export default function PublicSurvey() {
             slug={slug!}
             voiceDurationLimitSec={survey.voiceDurationLimitSec}
             textFeedbackEnabled={survey.textFeedbackEnabled}
-            onComplete={() => setSubmitted(true)}
+            onComplete={(responseId) => {
+              setSubmittedResponseId(responseId || null)
+              setSubmitted(true)
+            }}
           />
         </CardContent>
       </Card>

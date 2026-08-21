@@ -17,7 +17,7 @@ interface VoiceRecorderProps {
   slug: string
   voiceDurationLimitSec: number
   textFeedbackEnabled: boolean
-  onComplete: () => void
+  onComplete: (responseId?: string) => void
 }
 
 type RecorderState = "idle" | "requesting-mic" | "recording" | "stopped" | "uploading" | "done"
@@ -188,7 +188,7 @@ export default function VoiceRecorder({
         submittedAudioUrl = uploadData.secure_url
       }
 
-      await api.public.submitResponse(slug, {
+      const submitRes = await api.public.submitResponse(slug, {
         audioUrl: submittedAudioUrl,
         durationSec: audioUrl ? duration : undefined,
         sizeBytes: audioUrl ? undefined : undefined,
@@ -198,7 +198,7 @@ export default function VoiceRecorder({
       if (audioUrl) URL.revokeObjectURL(audioUrl)
       setState("done")
       toast.success("Response submitted successfully")
-      onComplete()
+      onComplete(submitRes.response.id)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to submit response")
       setState("stopped")

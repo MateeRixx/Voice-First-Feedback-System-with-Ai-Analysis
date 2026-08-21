@@ -2,6 +2,7 @@ import "dotenv/config";
 import { prisma } from "./prisma";
 import { sarvam } from "./sarvam";
 import { openrouter } from "./openrouter";
+import { notifyResponseClients } from "./notify";
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -36,6 +37,8 @@ export async function processResponse(responseId: string): Promise<void> {
   if (!response) throw new Error("Response not found");
   if (response.status !== "PENDING") throw new Error("Response already processed");
 
+  notifyResponseClients(responseId, "processing");
+
   const isTextOnly = !response.attachment && !!response.textFeedback;
 
   let transcript: string;
@@ -45,6 +48,7 @@ export async function processResponse(responseId: string): Promise<void> {
     transcript = response.textFeedback!;
   } else {
     if (!response.attachment) throw new Error("Response has no audio attachment or text feedback");
+    notifyResponseClients(responseId, "transcribing");
     const tmpFile = path.join(os.tmpdir(), `truetone-${responseId}.webm`);
     try {
       await downloadAudio(response.attachment.r2Url, tmpFile);
@@ -55,6 +59,8 @@ export async function processResponse(responseId: string): Promise<void> {
       try { fs.unlinkSync(tmpFile); } catch { /* ignore */ }
     }
   }
+
+  notifyResponseClients(responseId, "analyzing");
 
   const systemPrompt = [
     "You are a business feedback analyst. Analyze this voice transcript and return actionable insights.",
@@ -96,6 +102,11 @@ export async function processResponse(responseId: string): Promise<void> {
         rawModelOutput: insight,
       },
     });
+
+    notifyResponseClients(responseId, "done", {
+      sentiment: insight.sentiment,
+      urgency: insight.urgency,
+    });
   } catch (err) {
     // Don't overwrite PROCESSED → FAILED in a race condition
     const current = await prisma.surveyResponse.findUnique({
@@ -108,6 +119,7 @@ export async function processResponse(responseId: string): Promise<void> {
         data: { status: "FAILED" },
       });
     }
+    notifyResponseClients(responseId, "failed", { error: (err as Error).message });
     throw err;
   }
 }

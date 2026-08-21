@@ -63,14 +63,14 @@ Your cloud: `dujqqwfym` — keep the existing API key + secret.
 3. Set all env vars in Render dashboard
 4. Deploy — first deploy will run migrations via the start command
 
-**Cold start:** Render free tier sleeps after 15 min inactivity. First request after sleep takes ~30s. Mitigate with a cron job pinging `https://your-app.onrender.com/api/health` every 5 min.
+**Cold start:** Render free tier sleeps after 15 min inactivity. First request after sleep takes ~30s. Mitigate with a cron job pinging `https://voice-first-feedback-system-with-ai-ueyw.onrender.com/api/health` every 5 min.
 
 ### Keep Alive Options
 
 #### Option A: cron-job.org (simplest, free, no code)
 
 1. Go to [cron-job.org](https://cron-job.org) → Sign up → Create cron job
-2. **URL:** `https://your-app.onrender.com/api/health`
+2. **URL:** `https://voice-first-feedback-system-with-ai-ueyw.onrender.com/api/health`
 3. **Interval:** Every 5 minutes
 4. Save — done. Server will stay awake 24/7.
 
@@ -81,7 +81,7 @@ Your cloud: `dujqqwfym` — keep the existing API key + secret.
 3. **Root Directory:** `server`
 4. **Command:** `npx tsx scripts/keep-alive.ts`
 5. **Schedule:** `*/5 * * * *`
-6. **Env Var:** `KEEP_ALIVE_URL=https://your-app.onrender.com`
+6. **Env Var:** `KEEP_ALIVE_URL=https://voice-first-feedback-system-with-ai-ueyw.onrender.com`
 7. **Plan:** Free
 8. Create — Render will ping your API every 5 minutes.
 

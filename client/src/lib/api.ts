@@ -175,6 +175,17 @@ export const api = {
       }),
     delete: (id: string) =>
       request<{ success: boolean }>(`/surveys/${id}`, { method: "DELETE" }),
+    exportCSV: async (surveyId: string): Promise<Blob> => {
+      const token = localStorage.getItem("truetone-token")
+      const res = await fetch(`${API_BASE}/surveys/${surveyId}/export/csv`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || `Export failed: ${res.status}`)
+      }
+      return res.blob()
+    },
   },
 
   dashboard: {

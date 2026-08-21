@@ -16,6 +16,9 @@ import {
   Loader2,
   Trash2,
 } from "lucide-react"
+import ProcessingStatusBar from "@/components/ProcessingStatusBar"
+import ExportButton from "@/components/ExportButton"
+import AudioPlayer from "@/components/AudioPlayer"
 
 type ResponseItem = {
   id: string
@@ -147,12 +150,15 @@ export default function Responses() {
         <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard/surveys")}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-semibold tracking-tight">{survey?.title ?? "Responses"}</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {responses.length} response{responses.length !== 1 ? "s" : ""}
           </p>
         </div>
+        {survey && responses.length > 0 && (
+          <ExportButton surveyId={survey.id} surveyTitle={survey.title} />
+        )}
       </div>
 
       {responses.length === 0 ? (
@@ -198,7 +204,7 @@ export default function Responses() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {r.attachment && (
-                  <audio src={r.attachment.r2Url} controls className="w-full h-10" />
+                  <AudioPlayer audioUrl={r.attachment.r2Url} />
                 )}
 
                 {r.textFeedback && (
@@ -209,20 +215,25 @@ export default function Responses() {
                 )}
 
                 {(r.status === "PENDING" || r.status === "FAILED") && (
-                  <Button
-                    variant={r.status === "FAILED" ? "destructive" : "secondary"}
-                    size="sm"
-                    className="gap-1.5"
-                    disabled={processingId === r.id}
-                    onClick={() => handleProcess(r.id)}
-                  >
-                    {processingId === r.id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Brain className="h-3.5 w-3.5" />
+                  <div className="space-y-2">
+                    {r.status === "PENDING" && processingId !== r.id && (
+                      <ProcessingStatusBar responseId={r.id} />
                     )}
-                    {processingId === r.id ? "Processing..." : r.status === "FAILED" ? "Retry" : "Process with AI"}
-                  </Button>
+                    <Button
+                      variant={r.status === "FAILED" ? "destructive" : "secondary"}
+                      size="sm"
+                      className="gap-1.5"
+                      disabled={processingId === r.id}
+                      onClick={() => handleProcess(r.id)}
+                    >
+                      {processingId === r.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Brain className="h-3.5 w-3.5" />
+                      )}
+                      {processingId === r.id ? "Processing..." : r.status === "FAILED" ? "Retry" : "Process with AI"}
+                    </Button>
+                  </div>
                 )}
 
                 {r.transcript && (
