@@ -16,8 +16,9 @@ export function useResponseStatus(responseId: string | null) {
   useEffect(() => {
     if (!responseId) return
 
-    const WS_BASE = import.meta.env.VITE_API_WS_URL || "ws://localhost:3000"
-    const ws = new WebSocket(`${WS_BASE}/ws/response/${responseId}`)
+    const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:3000/api"
+    const wsBase = API_URL.replace(/^http/, "ws").replace(/\/api\/?$/, "")
+    const ws = new WebSocket(`${wsBase}/ws/response/${responseId}`)
 
     ws.onmessage = (event) => {
       try {

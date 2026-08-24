@@ -67,6 +67,10 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() })
 })
 
+app.get("/", (_req, res) => {
+  res.json({ message: "TrueTone API is running", status: "success" })
+})
+
 app.use("/api/public", publicLimiter, publicRouter)
 app.use("/api/auth", authLimiter, authRouter)
 app.use("/api/surveys", surveyRouter)
