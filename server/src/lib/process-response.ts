@@ -28,6 +28,14 @@ async function downloadAudio(url: string, dest: string): Promise<void> {
   fs.writeFileSync(dest, buffer);
 }
 
+export type AIInsight = {
+  summary: string;
+  sentiment: "POSITIVE" | "NEGATIVE" | "NEUTRAL" | "MIXED";
+  urgency: "HIGH" | "MEDIUM" | "LOW";
+  tags: string[];
+  rawModelOutput?: unknown;
+};
+
 export async function processResponse(responseId: string): Promise<void> {
   const response = await prisma.surveyResponse.findUnique({
     where: { id: responseId },
@@ -52,9 +60,13 @@ export async function processResponse(responseId: string): Promise<void> {
     const tmpFile = path.join(os.tmpdir(), `truetone-${responseId}.webm`);
     try {
       await downloadAudio(response.attachment.r2Url, tmpFile);
+      // Use Sarvam STT (primary)
       const result = await sarvam.transcribe(tmpFile);
       transcript = result.transcript;
       language = result.language ?? null;
+    } catch (err) {
+      console.error("STT error:", err);
+      throw new Error(`Transcription failed: ${(err as Error).message}`);
     } finally {
       try { fs.unlinkSync(tmpFile); } catch { /* ignore */ }
     }
@@ -74,7 +86,8 @@ export async function processResponse(responseId: string): Promise<void> {
     JSON.stringify({ summary: "1-2 sentence key takeaway", sentiment: "POSITIVE|NEGATIVE|NEUTRAL|MIXED", urgency: "HIGH|MEDIUM|LOW", tags: ["tag1", "tag2"] }),
   ].join("\n");
 
-  const insight = await openrouter.analyzeJSON<{
+  // Use OpenRouter with Groq + OpenAI fallback
+  const insight = await openrouter.analyzeWithFallback<{
     summary: string;
     sentiment: "POSITIVE" | "NEGATIVE" | "NEUTRAL" | "MIXED";
     urgency: "HIGH" | "MEDIUM" | "LOW";

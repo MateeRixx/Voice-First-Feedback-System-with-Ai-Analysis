@@ -31,7 +31,7 @@ const app = express()
 app.use(helmet())
 const allowedOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(",").map((s) => s.trim())
-  : ["http://127.0.0.1:5173", "http://localhost:5173"]
+  : ["http://127.0.0.1:5173", "http://localhost:5173", "https://voice-first-feedback-system-with-ai-analysis-jxnd8qv1k.vercel.app"]
 
 app.use(cors({
   origin: (origin, cb) => {

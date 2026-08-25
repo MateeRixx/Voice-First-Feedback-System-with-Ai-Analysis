@@ -70,7 +70,7 @@ export default function VoiceRecorder({
   }, [stopAll])
 
   async function startRecording() {
-    setState("requesting-mic")
+    setDuration(0)
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error("getUserMedia not available in this browser")
