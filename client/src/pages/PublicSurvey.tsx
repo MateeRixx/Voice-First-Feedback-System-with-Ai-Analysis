@@ -34,7 +34,12 @@ export default function PublicSurvey() {
     setLoading(true)
     api.public
       .getSurvey(slug)
-      .then((res) => setSurvey(res.survey))
+      .then((res) => {
+        setSurvey(res.survey)
+        if (res.survey?.id) {
+          window.__SURVEY_ID__ = res.survey.id
+        }
+      })
       .catch(() => setError("This survey could not be found or is no longer available."))
       .finally(() => setLoading(false))
   }, [slug])

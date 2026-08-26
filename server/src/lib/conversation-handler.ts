@@ -62,31 +62,77 @@ interface SessionSTT {
 }
 
 const sttSessions = new Map<string, SessionSTT>();
+const sttFailedSessions = new Set<string>();
 
 export function initRealtimeSTT(sessionId: string, clientWs: WebSocket): void {
-  const stt = createRealtimeSTT({
-    onPartial: (text) => {
-      clientWs.send(JSON.stringify({ type: "user_partial", text }));
-      const session = sttSessions.get(sessionId);
-      if (session) session.partialText = text;
-    },
+  if (sttFailedSessions.has(sessionId)) {
+    console.log(`[STT] Session ${sessionId} previously failed, skipping STT init`);
+    if (clientWs.readyState === WebSocket.OPEN) {
+      clientWs.send(JSON.stringify({ 
+        type: "stt_unavailable",
+        message: "Speech-to-text service unavailable. Text input mode enabled."
+      }));
+    }
+    return;
+  }
 
-    onFinal: async (transcript) => {
-      clientWs.send(JSON.stringify({ type: "agent_thinking" }));
-      await handleUserTurn(sessionId, transcript, clientWs);
-    },
+  let stt: WebSocket | null = null;
+  let sttFailed = false;
+  try {
+    stt = createRealtimeSTT({
+      onPartial: (text) => {
+        if (clientWs.readyState === WebSocket.OPEN) {
+          clientWs.send(JSON.stringify({ type: "user_partial", text }));
+        }
+        const session = sttSessions.get(sessionId);
+        if (session) session.partialText = text;
+      },
 
-    onError: (err) => {
-      console.error(`[STT] Session ${sessionId} error:`, err.message);
-      cleanupSTT(sessionId);
-    },
+      onFinal: async (transcript) => {
+        if (clientWs.readyState === WebSocket.OPEN) {
+          clientWs.send(JSON.stringify({ type: "agent_thinking" }));
+        }
+        await handleUserTurn(sessionId, transcript, clientWs);
+      },
 
-    onClose: () => {
-      sttSessions.delete(sessionId);
-    },
-  });
+      onError: (err) => {
+        console.error(`[STT] Session ${sessionId} error:`, err.message);
+        if (err.message.includes("403") || err.message.includes("Forbidden")) {
+          sttFailed = true;
+          sttFailedSessions.add(sessionId);
+          if (clientWs.readyState === WebSocket.OPEN) {
+            clientWs.send(JSON.stringify({ 
+              type: "stt_unavailable",
+              message: "Speech-to-text service unavailable. Text input mode enabled."
+            }));
+          }
+        }
+        cleanupSTT(sessionId);
+      },
 
-  sttSessions.set(sessionId, { ws: stt, partialText: "" });
+      onClose: () => {
+        sttSessions.delete(sessionId);
+        if (sttFailed && clientWs.readyState === WebSocket.OPEN) {
+          clientWs.send(JSON.stringify({ 
+            type: "stt_unavailable",
+            message: "STT connection failed"
+          }));
+        }
+      },
+    });
+
+    sttSessions.set(sessionId, { ws: stt, partialText: "" });
+  } catch (err) {
+    console.error(`[STT] Failed to init for ${sessionId}:`, err);
+    if (stt) stt.close();
+    sttFailedSessions.add(sessionId);
+    if (clientWs.readyState === WebSocket.OPEN) {
+      clientWs.send(JSON.stringify({ 
+        type: "stt_unavailable",
+        message: "Failed to initialize STT"
+      }));
+    }
+  }
 }
 
 export function handleAudioChunk(sessionId: string, pcm16Buffer: Buffer): void {
@@ -154,7 +200,7 @@ class ConversationSession {
     await sleep(800);
   }
 
-  private askNextQuestion() {
+  private async askNextQuestion() {
     if (this.currentQuestionIndex >= this.questions.length) {
       this.finish();
       return;
@@ -164,7 +210,7 @@ class ConversationSession {
     const prefix = isLast ? "Last one — " : "";
     this.setStatus("asking");
     this.send({ type: "agent_speak", text: prefix + q.text, questionId: q.id });
-    this.speakAndWait(prefix + q.text);
+    await this.speakAndWait(prefix + q.text);
     this.setStatus("listening");
   }
 
@@ -260,21 +306,28 @@ async function handleUserTurn(sessionId: string, transcript: string, clientWs: W
       firstSentence = false;
     }
     fullResponse += sentence;
-    synthesizeToBuffer(sentence).then((wav) => {
-      clientWs.send(JSON.stringify({
-        type:       "audio",
-        data:       wav.toString("base64"),
-        sampleRate: 22050,
-      }));
-    }).catch((err) => {
+    try {
+      const wav = await synthesizeToBuffer(sentence);
+      if (clientWs.readyState === WebSocket.OPEN) {
+        clientWs.send(JSON.stringify({
+          type:       "audio",
+          data:       wav.toString("base64"),
+          sampleRate: 22050,
+        }));
+      }
+    } catch (err) {
       console.error("[TTS] Bulbul error, falling back:", err.message);
-      clientWs.send(JSON.stringify({ type: "tts_chunk", text: sentence }));
-    });
+      if (clientWs.readyState === WebSocket.OPEN) {
+        clientWs.send(JSON.stringify({ type: "tts_chunk", text: sentence }));
+      }
+    }
   }
 
   console.log(`[LATENCY] Full turn: ${Date.now() - t0}ms`);
   session.history.push({ role: "assistant", content: fullResponse });
-  clientWs.send(JSON.stringify({ type: "turn_complete" }));
+  if (clientWs.readyState === WebSocket.OPEN) {
+    clientWs.send(JSON.stringify({ type: "turn_complete" }));
+  }
 }
 
 function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
@@ -317,6 +370,14 @@ export async function handleConversationMessage(ws: WebSocket, sessionId: string
     return;
   }
 
+  if (msg.type === "user_text" && msg.text) {
+    const session = sessions.get(sessionId);
+    if (!session) return;
+    // Handle text input directly (bypass STT)
+    session.handleUserTurn(msg.text);
+    return;
+  }
+
   if (msg.type === "audio" && msg.audio) {
     // Legacy audio message type - not used with realtime STT
     const session = sessions.get(sessionId);
@@ -329,4 +390,5 @@ export async function handleConversationMessage(ws: WebSocket, sessionId: string
 export function cleanupSession(sessionId: string) {
   sessions.delete(sessionId);
   cleanupSTT(sessionId);
+  sttFailedSessions.delete(sessionId);
 }

@@ -31,7 +31,8 @@ function getWsBase(): string {
 }
 
 interface TTSQueueItem {
-  text: string;
+  text?: string;
+  audioBase64?: string;
   priority?: "high" | "normal";
 }
 
@@ -39,6 +40,7 @@ function useTTSQueue(onQueueEmpty?: () => void) {
   const queue = useRef<TTSQueueItem[]>([]);
   const playing = useRef(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const playNext = useCallback(() => {
     if (queue.current.length === 0) {
@@ -52,25 +54,41 @@ function useTTSQueue(onQueueEmpty?: () => void) {
     setIsSpeaking(true);
     const item = queue.current.shift()!;
 
-    if (!window.speechSynthesis) {
+    if (item.audioBase64) {
+      // Play Sarvam base64 audio
+      const audio = new Audio(`data:audio/wav;base64,${item.audioBase64}`);
+      audioRef.current = audio;
+      audio.onended = () => {
+        audioRef.current = null;
+        playNext();
+      };
+      audio.onerror = () => {
+        audioRef.current = null;
+        playNext();
+      };
+      audio.play().catch(() => {
+        audioRef.current = null;
+        playNext();
+      });
+    } else if (item.text && window.speechSynthesis) {
+      // Fallback to browser SpeechSynthesis
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(item.text);
+      u.rate = 0.95;
+      u.pitch = 1.0;
+      u.volume = 1;
+
+      const voices = window.speechSynthesis.getVoices();
+      const v = voices.find((v) => v.lang.startsWith("en") && (v.name.includes("Google") || v.name.includes("Samantha"))) || voices.find((v) => v.lang.startsWith("en")) || voices[0];
+      if (v) u.voice = v;
+
+      u.onend = () => playNext();
+      u.onerror = () => playNext();
+
+      window.speechSynthesis.speak(u);
+    } else {
       playNext();
-      return;
     }
-
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(item.text);
-    u.rate = 0.95;
-    u.pitch = 1.0;
-    u.volume = 1;
-
-    const voices = window.speechSynthesis.getVoices();
-    const v = voices.find((v) => v.lang.startsWith("en") && (v.name.includes("Google") || v.name.includes("Samantha"))) || voices.find((v) => v.lang.startsWith("en")) || voices[0];
-    if (v) u.voice = v;
-
-    u.onend = () => playNext();
-    u.onerror = () => playNext();
-
-    window.speechSynthesis.speak(u);
   }, [onQueueEmpty]);
 
   const enqueue = useCallback((text: string, priority: "high" | "normal" = "normal") => {
@@ -81,14 +99,23 @@ function useTTSQueue(onQueueEmpty?: () => void) {
     }
   }, [playNext]);
 
+  const enqueueAudio = useCallback((audioBase64: string) => {
+    queue.current.push({ audioBase64, priority: "high" });
+    if (!playing.current) {
+      playNext();
+    }
+  }, [playNext]);
+
   const flush = useCallback(() => {
     queue.current = [];
     window.speechSynthesis?.cancel();
+    audioRef.current?.pause();
+    audioRef.current = null;
     playing.current = false;
     setIsSpeaking(false);
   }, []);
 
-  return { enqueue, flush, isSpeaking };
+  return { enqueue, enqueueAudio, flush, isSpeaking };
 }
 
 function float32ToPCM16(input: Float32Array): ArrayBuffer {
@@ -116,6 +143,7 @@ export function useConversation(sessionId: string) {
   const [isRecording, setIsRecording] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userTranscript, setUserTranscript] = useState("");
+  const [sttAvailable, setSttAvailable] = useState(true);
 
   const wsRef = useRef<WebSocket | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -199,14 +227,14 @@ export function useConversation(sessionId: string) {
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
-    if (mountedRef.current) return;
-    mountedRef.current = true;
 
     setStatus("connecting");
     const ws = new WebSocket(`${getWsBase()}/ws/conversation/${sessionId}`);
 
     ws.onopen = () => {
-      ws.send(JSON.stringify({ type: "session_init", sessionId, surveyId: window.__SURVEY_ID__ }));
+      mountedRef.current = true;
+      const surveyId = (window as any).__SURVEY_ID__
+      ws.send(JSON.stringify({ type: "session_init", sessionId, surveyId }));
     };
 
     ws.onmessage = (event) => {
@@ -216,7 +244,6 @@ export function useConversation(sessionId: string) {
           case "agent_speak":
             addMessage({ role: "agent", text: msg.text });
             setStatus("asking");
-            tts.enqueue(msg.text, msg.streaming ? "high" : "normal");
             break;
           case "user_transcript":
             addMessage({ role: "user", text: msg.text });
@@ -230,8 +257,7 @@ export function useConversation(sessionId: string) {
             break;
           case "audio":
             if (msg.data) {
-              const audio = new Audio(`data:audio/wav;base64,${msg.data}`);
-              audio.play().catch(() => {});
+              tts.enqueueAudio(msg.data);
             }
             break;
           case "tts_chunk":
@@ -239,6 +265,9 @@ export function useConversation(sessionId: string) {
             break;
           case "status":
             setStatus(msg.status);
+            if (msg.status === "error" || (msg as any).message?.includes("STT")) {
+              setSttAvailable(false);
+            }
             break;
           case "agent_thinking":
             setStatus("transcribing");
@@ -247,25 +276,42 @@ export function useConversation(sessionId: string) {
             setStatus("listening");
             startMicStream();
             break;
+          case "stt_unavailable":
+            setSttAvailable(false);
+            break;
           case "analysis":
             setInsight(msg.insight);
             break;
           case "error":
             setError(msg.message);
             addMessage({ role: "system", text: `Error: ${msg.message}` });
+            if (msg.message?.includes("Speech-to-text") || msg.message?.includes("STT")) {
+              setSttAvailable(false);
+            }
             break;
         }
       } catch {}
     };
 
-    ws.onerror = () => setError("WebSocket connection failed");
-    ws.onclose = () => {
+    ws.onerror = (err) => {
+      console.error("[WS] Error:", err, "readyState:", ws.readyState);
+      setError("WebSocket connection failed");
+    };
+    ws.onclose = (e) => {
+      console.log("[WS] Closed:", e.code, e.reason, "wasClean:", e.wasClean);
+      mountedRef.current = false;
       if (status !== "done") setStatus("idle");
       stopMicStream();
+      // Don't reconnect on certain error codes (403, insufficient resources, etc.)
+      const noRetryCodes = [1000, 1001, 1005, 1006, 1008, 1009, 1011, 4000, 4001, 4003];
+      const shouldRetry = status !== "done" && !noRetryCodes.includes(e.code);
+      if (shouldRetry) {
+        setTimeout(() => connect(), 1000);
+      }
     };
 
     wsRef.current = ws;
-  }, [sessionId, addMessage, status, tts, stopMicStream]);
+  }, [sessionId, addMessage, tts, stopMicStream]);
 
   const cleanup = useCallback(() => {
     mountedRef.current = false;
@@ -280,6 +326,12 @@ export function useConversation(sessionId: string) {
     };
   }, [cleanup]);
 
+  const sendText = useCallback((text: string) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: "user_text", text }));
+    }
+  }, []);
+
   return {
     status,
     messages,
@@ -288,9 +340,11 @@ export function useConversation(sessionId: string) {
     isSpeaking: tts.isSpeaking,
     error,
     userTranscript,
+    sttAvailable,
     connect,
     startRecording: startMicStream,
     stopRecording: stopMicStream,
     stopSpeaking: tts.flush,
+    sendText,
   };
 }

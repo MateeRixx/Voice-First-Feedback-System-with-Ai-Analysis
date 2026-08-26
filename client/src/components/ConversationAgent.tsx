@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useConversation } from "@/hooks/useConversation";
 import { Button } from "@/components/ui/button";
-import { Mic, Square, Loader2, Bot, AlertCircle, CheckCircle2, Volume2, VolumeX } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Mic, Square, Loader2, Bot, AlertCircle, CheckCircle2, Volume2, VolumeX, Send, Keyboard, MicOff } from "lucide-react";
 
 interface ConversationAgentProps {
   sessionId: string;
@@ -61,14 +62,17 @@ export default function ConversationAgent({ sessionId, onDone }: ConversationAge
     isSpeaking,
     error,
     userTranscript,
+    sttAvailable,
     connect,
     startRecording,
     stopRecording,
     stopSpeaking,
+    sendText,
   } = useConversation(sessionId);
 
   const [lastAgentMessage, setLastAgentMessage] = useState("");
   const [lastUserMessage, setLastUserMessage] = useState("");
+  const [textInput, setTextInput] = useState("");
 
   useEffect(() => {
     connect();
@@ -101,6 +105,13 @@ export default function ConversationAgent({ sessionId, onDone }: ConversationAge
     status === "transcribing" ? "Understanding..." :
     status === "analyzing" ? "Analyzing..." :
     status === "done" ? "Complete" : "Ready";
+
+  const handleTextSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!textInput.trim()) return;
+    sendText(textInput.trim());
+    setTextInput("");
+  };
 
   return (
     <div className="flex flex-col items-center justify-center h-full space-y-6 p-4">
@@ -158,46 +169,83 @@ export default function ConversationAgent({ sessionId, onDone }: ConversationAge
         </div>
       )}
 
-      <div className="flex items-center gap-4">
-        {isSpeaking && (
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={stopSpeaking}
-            className="gap-2 rounded-full h-14 w-14 p-0"
-          >
-            <VolumeX className="h-5 w-5" />
-          </Button>
+      {!sttAvailable && status !== "done" && (
+        <div className="mx-4 mb-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+          <p className="text-xs text-amber-700 flex items-center gap-1.5">
+            <MicOff className="h-3.5 w-3.5" />
+            Voice input unavailable — type your responses instead
+          </p>
+        </div>
+      )}
+
+      <div className="flex flex-col items-center gap-4 w-full max-w-md">
+        {!sttAvailable && status !== "done" && (
+          <form onSubmit={handleTextSubmit} className="w-full flex gap-2">
+            <Input
+              type="text"
+              value={textInput}
+              onChange={(e) => setTextInput(e.target.value)}
+              placeholder="Type your response and press Enter..."
+              className="flex-1"
+              disabled={isThinking}
+              autoFocus
+            />
+            <Button type="submit" disabled={isThinking || !textInput.trim()} className="gap-2 h-10">
+              <Send className="h-4 w-4" />
+            </Button>
+          </form>
         )}
 
-        {status === "done" ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <CheckCircle2 className="h-4 w-4" />
-            Conversation complete
-          </div>
-        ) : isRecording ? (
-          <Button
-            onClick={stopRecording}
-            variant="destructive"
-            size="lg"
-            className="gap-2 rounded-full h-14 w-14 p-0"
-          >
-            <Square className="h-5 w-5" />
-          </Button>
-        ) : isActive ? (
-          <Button
-            onClick={startRecording}
-            size="lg"
-            className="gap-2 rounded-full h-14 w-14 p-0"
-            disabled={isThinking}
-          >
-            {isThinking ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <Mic className="h-5 w-5" />
-            )}
-          </Button>
-        ) : null}
+        <div className="flex items-center gap-4">
+          {isSpeaking && (
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={stopSpeaking}
+              className="gap-2 rounded-full h-14 w-14 p-0"
+            >
+              <VolumeX className="h-5 w-5" />
+            </Button>
+          )}
+
+          {status === "done" ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <CheckCircle2 className="h-4 w-4" />
+              Conversation complete
+            </div>
+          ) : isRecording ? (
+            <Button
+              onClick={stopRecording}
+              variant="destructive"
+              size="lg"
+              className="gap-2 rounded-full h-14 w-14 p-0"
+            >
+              <Square className="h-5 w-5" />
+            </Button>
+          ) : isActive && sttAvailable ? (
+            <Button
+              onClick={startRecording}
+              size="lg"
+              className="gap-2 rounded-full h-14 w-14 p-0"
+              disabled={isThinking}
+            >
+              {isThinking ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Mic className="h-5 w-5" />
+              )}
+            </Button>
+          ) : (!sttAvailable && isActive ? (
+            <Button
+              variant="outline"
+              size="lg"
+              className="gap-2 rounded-full h-14 w-14 p-0"
+              disabled
+            >
+              <Keyboard className="h-5 w-5" />
+            </Button>
+          ) : null)}
+        </div>
       </div>
     </div>
   );

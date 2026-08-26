@@ -142,14 +142,23 @@ wss.on("connection", (ws, req) => {
         } else {
           handleConversationMessage(ws, sessionId, data as Buffer);
         }
-      } catch {
+      } catch (err) {
+        console.error("[WS] Message error:", err);
         ws.send(JSON.stringify({ type: "error", message: "Invalid JSON" }));
       }
     });
     
-    ws.on("close", () => cleanupSession(sessionId))
-    ws.send(JSON.stringify({ type: "status", status: "connected" }))
-    return
+    ws.on("error", (err) => {
+      console.error("[WS] Socket error:", err);
+    });
+    
+    ws.on("close", (code, reason) => {
+      console.log("[WS] Close:", code, reason.toString());
+      cleanupSession(sessionId);
+    });
+    
+    ws.send(JSON.stringify({ type: "status", status: "connected" }));
+    return;
   }
 
   // Admin survey creation WebSocket: /ws/survey-creation/:sessionId/:orgId

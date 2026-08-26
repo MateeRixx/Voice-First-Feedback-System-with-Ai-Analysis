@@ -1,5 +1,6 @@
 .env
-.env.dev
+.env.
+.env.test
 node_modules
 AgentInstruction.md
 DESIGN.md
