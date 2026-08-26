@@ -55,6 +55,7 @@ model Survey {
   subtitle             String?
   description          String?
   slug                 String       @unique
+  questions            Json?        // Voice-created questions: [{id, text, category}]
   voiceDurationLimitSec Int         @default(120)
   theme                Json?
   textFeedbackEnabled  Boolean      @default(false)

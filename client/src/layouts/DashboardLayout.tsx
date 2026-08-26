@@ -29,12 +29,14 @@ import {
   Menu,
   MicVocal,
   ChevronRight,
+  Mic,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const navItems = [
   { icon: LayoutDashboard, label: "Overview", path: "/dashboard" },
   { icon: ClipboardList, label: "Surveys", path: "/dashboard/surveys" },
+  { icon: Mic, label: "Create Voice Survey", path: "/dashboard/surveys/create-voice" },
   { icon: BarChart3, label: "Analytics", path: "/dashboard/analytics" },
   { icon: Settings, label: "Settings", path: "/dashboard/settings" },
 ]

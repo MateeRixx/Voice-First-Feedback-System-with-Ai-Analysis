@@ -11,10 +11,17 @@ const mediaItemSchema = z.object({
   caption: z.string().optional(),
 });
 
+const questionSchema = z.object({
+  id: z.string(),
+  text: z.string().min(1),
+  category: z.enum(["opening", "feedback", "clarification", "closing"]),
+});
+
 const createSurveySchema = z.object({
   title: z.string().min(1, "Title is required").max(200),
   subtitle: z.string().max(500).optional(),
   description: z.string().max(5000).optional(),
+  questions: z.array(questionSchema).min(1, "At least one question required").max(10).optional(),
   voiceDurationLimitSec: z.number().int().min(10).max(300).optional(),
   textFeedbackEnabled: z.boolean().optional(),
   theme: z.record(z.string(), z.unknown()).optional(),
@@ -60,7 +67,7 @@ export async function create(req: Request, res: Response) {
       return res.status(400).json({ error: parsed.error.issues.map((e) => e.message).join(", ") });
     }
 
-    const { title, subtitle, description, voiceDurationLimitSec, textFeedbackEnabled, theme, media } = parsed.data;
+    const { title, subtitle, description, questions, voiceDurationLimitSec, textFeedbackEnabled, theme, media } = parsed.data;
 
     const slug = title
       .toLowerCase()
@@ -74,6 +81,7 @@ export async function create(req: Request, res: Response) {
         subtitle: subtitle || null,
         description: description || null,
         slug,
+        questions: questions as any,
         voiceDurationLimitSec: voiceDurationLimitSec || 120,
         textFeedbackEnabled: textFeedbackEnabled ?? false,
         theme: theme as object | undefined,

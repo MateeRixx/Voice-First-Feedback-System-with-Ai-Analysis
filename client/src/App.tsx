@@ -12,6 +12,7 @@ import Surveys from "@/pages/Dashboard/Surveys"
 import Responses from "@/pages/Dashboard/Responses"
 import Analytics from "@/pages/Dashboard/Analytics"
 import Settings from "@/pages/Dashboard/Settings"
+import CreateSurveyVoice from "@/pages/Dashboard/CreateSurveyVoice"
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem("truetone-token")
@@ -42,6 +43,7 @@ function App() {
           >
             <Route index element={<Overview />} />
             <Route path="surveys" element={<Surveys />} />
+            <Route path="surveys/create-voice" element={<CreateSurveyVoice />} />
             <Route path="surveys/:surveyId/responses" element={<Responses />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="settings" element={<Settings />} />

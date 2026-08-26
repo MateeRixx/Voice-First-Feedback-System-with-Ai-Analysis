@@ -41,6 +41,7 @@ export interface Survey {
   subtitle: string | null
   description: string | null
   slug: string
+  questions: Question[]
   voiceDurationLimitSec: number
   textFeedbackEnabled: boolean
   theme: Record<string, unknown> | null
@@ -49,6 +50,12 @@ export interface Survey {
   createdAt: string
   updatedAt: string
   _count: { responses: number }
+}
+
+export interface Question {
+  id: string
+  text: string
+  category: "opening" | "feedback" | "clarification" | "closing"
 }
 
 export const api = {
@@ -84,6 +91,7 @@ export const api = {
           subtitle: string | null
           description: string | null
           orgName: string
+          questions: Question[]
           voiceDurationLimitSec: number
           textFeedbackEnabled: boolean
           theme: Record<string, unknown> | null
@@ -109,7 +117,7 @@ export const api = {
   surveys: {
     list: () => request<{ surveys: Survey[] }>("/surveys"),
     get: (id: string) => request<{ survey: Survey }>(`/surveys/${id}`),
-    create: (data: { title: string; subtitle?: string; description?: string; voiceDurationLimitSec?: number; textFeedbackEnabled?: boolean; theme?: Record<string, unknown>; media?: MediaItem[] }) =>
+    create: (data: { title: string; subtitle?: string; description?: string; questions?: Question[]; voiceDurationLimitSec?: number; textFeedbackEnabled?: boolean; theme?: Record<string, unknown>; media?: MediaItem[] }) =>
       request<{ survey: Survey }>("/surveys", {
         method: "POST",
         body: JSON.stringify(data),

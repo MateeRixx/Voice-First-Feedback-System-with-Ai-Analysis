@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { sarvam } from "./sarvam";
+import { transcribeAudio } from "./sarvam";
 import { openrouter } from "./openrouter";
 import type { AIInsight } from "./process-response";
 
@@ -123,20 +123,11 @@ export class ConversationFlow {
 
   async processResponse(audioBlob: Blob): Promise<void> {
     // Transcribe using Sarvam
-    const tmpFile = `/tmp/truetone-${Date.now()}.webm`;
     try {
-      // Write audio to temp file and transcribe
       const arrayBuffer = await audioBlob.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
-      const fs = await import("fs");
-      const path = await import("path");
-      const os = await import("os");
-      
-      const tmpPath = path.join(os.tmpdir(), `${tmpFile}`);
-      fs.writeFileSync(tmpPath, buffer);
 
-      const result = await sarvam.transcribe(tmpPath);
-      const transcript = result.transcript || "";
+      const transcript = await transcribeAudio(buffer);
 
       this.state.transcript = transcript;
       this.onStatusChange({
@@ -154,8 +145,6 @@ export class ConversationFlow {
       await this.handleResponse(transcript);
     } catch (err) {
       console.error("Transcription error:", err);
-    } finally {
-      try { const fs = await import("fs"); fs.unlinkSync(tmpFile); } catch {}
     }
   }
 

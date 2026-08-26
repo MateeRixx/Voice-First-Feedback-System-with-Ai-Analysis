@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { prisma } from "./prisma";
-import { sarvam } from "./sarvam";
-import { openrouter } from "./openrouter";
+import { transcribeAudio } from "./sarvam";
+import { llm } from "./llm";
 import { notifyResponseClients } from "./notify";
 import fs from "fs";
 import path from "path";
@@ -61,9 +61,9 @@ export async function processResponse(responseId: string): Promise<void> {
     try {
       await downloadAudio(response.attachment.r2Url, tmpFile);
       // Use Sarvam STT (primary)
-      const result = await sarvam.transcribe(tmpFile);
-      transcript = result.transcript;
-      language = result.language ?? null;
+      const fileBuffer = fs.readFileSync(tmpFile);
+      transcript = await transcribeAudio(fileBuffer);
+      language = null; // transcribeAudio doesn't return language currently
     } catch (err) {
       console.error("STT error:", err);
       throw new Error(`Transcription failed: ${(err as Error).message}`);
@@ -86,8 +86,8 @@ export async function processResponse(responseId: string): Promise<void> {
     JSON.stringify({ summary: "1-2 sentence key takeaway", sentiment: "POSITIVE|NEGATIVE|NEUTRAL|MIXED", urgency: "HIGH|MEDIUM|LOW", tags: ["tag1", "tag2"] }),
   ].join("\n");
 
-  // Use OpenRouter with Groq + OpenAI fallback
-  const insight = await openrouter.analyzeWithFallback<{
+  // Use Groq primary with OpenRouter fallback
+  const insight = await llm.analyzeJSON<{
     summary: string;
     sentiment: "POSITIVE" | "NEGATIVE" | "NEUTRAL" | "MIXED";
     urgency: "HIGH" | "MEDIUM" | "LOW";

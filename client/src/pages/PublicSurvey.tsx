@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import VoiceRecorder from "@/components/VoiceRecorder"
+import ConversationAgent from "@/components/ConversationAgent"
 import AnimatedHero from "@/components/AnimatedHero"
 import ProcessingStatusBar from "@/components/ProcessingStatusBar"
 import {
@@ -15,6 +16,7 @@ import {
   ShieldX,
   Volume2,
   Lock,
+  Bot,
 } from "lucide-react"
 
 export default function PublicSurvey() {
@@ -24,6 +26,8 @@ export default function PublicSurvey() {
   const [error, setError] = useState("")
   const [submitted, setSubmitted] = useState(false)
   const [submittedResponseId, setSubmittedResponseId] = useState<string | null>(null)
+  const [mode, setMode] = useState<"single" | "conversational">("conversational")
+  const [conversationId] = useState(() => `conv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
 
   useEffect(() => {
     if (!slug) return
@@ -132,6 +136,32 @@ export default function PublicSurvey() {
             )}
           </div>
 
+          {/* Mode selector */}
+          <div className="flex rounded-lg border overflow-hidden">
+            <button
+              onClick={() => setMode("conversational")}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                mode === "conversational"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              <Bot className="h-4 w-4" />
+              Voice Agent
+            </button>
+            <button
+              onClick={() => setMode("single")}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                mode === "single"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              <Mic className="h-4 w-4" />
+              Quick Record
+            </button>
+          </div>
+
           {survey.description && (
             <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-4 space-y-2">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Concept</p>
@@ -189,15 +219,27 @@ export default function PublicSurvey() {
             )
           })()}
 
-          <VoiceRecorder
-            slug={slug!}
-            voiceDurationLimitSec={survey.voiceDurationLimitSec}
-            textFeedbackEnabled={survey.textFeedbackEnabled}
-            onComplete={(responseId) => {
-              setSubmittedResponseId(responseId || null)
-              setSubmitted(true)
-            }}
-          />
+          {/* Voice input area */}
+          {mode === "conversational" ? (
+            <div className="rounded-lg border bg-card overflow-hidden" style={{ minHeight: "400px" }}>
+              <ConversationAgent
+                sessionId={conversationId}
+                onDone={(_insight) => {
+                  setSubmitted(true)
+                }}
+              />
+            </div>
+          ) : (
+            <VoiceRecorder
+              slug={slug!}
+              voiceDurationLimitSec={survey.voiceDurationLimitSec}
+              textFeedbackEnabled={survey.textFeedbackEnabled}
+              onComplete={(responseId) => {
+                setSubmittedResponseId(responseId || null)
+                setSubmitted(true)
+              }}
+            />
+          )}
         </CardContent>
       </Card>
     </div>

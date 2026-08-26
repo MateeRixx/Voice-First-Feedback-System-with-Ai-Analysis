@@ -15,6 +15,8 @@ import { startQueue } from "./lib/job-queue"
 import { startWorker } from "./lib/worker"
 import { errorHandler } from "./middleware/errorHandler"
 import { responseClients } from "./lib/notify"
+import { handleConversationMessage, cleanupSession, initRealtimeSTT, handleAudioChunk } from "./lib/conversation-handler"
+import { handleAdminMessage, cleanupAdminSession } from "./lib/admin-session-handler"
 
 dotenv.config()
 
@@ -64,11 +66,16 @@ const authLimiter = rateLimit({
 })
 
 app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() })
+  res.json({ status: "ok", timestamp: new Date().toISOString(), port: PORT })
 })
 
 app.get("/", (_req, res) => {
-  res.json({ message: "TrueTone API is running", status: "success" })
+  res.json({ message: "TrueTone API is running", status: "success", port: PORT })
+})
+
+// Check if WebSocket server is ready
+app.get("/api/ws-status", (_req, res) => {
+  res.json({ wsClients: wss.clients.size })
 })
 
 app.use("/api/public", publicLimiter, publicRouter)
@@ -103,31 +110,67 @@ const httpServer = createServer(app)
 const wss = new WebSocketServer({ server: httpServer })
 
 wss.on("connection", (ws, req) => {
-  const url = new URL(req.url || "/", `http://${req.headers.host}`)
+  console.log("[WS] Raw URL:", req.url)
+  console.log("[WS] Headers host:", req.headers.host)
+  
+  const url = new URL(req.url || "/", `http://${req.headers.host || "localhost:3000"}`)
   const pathParts = url.pathname.split("/").filter(Boolean)
-  const responseId = pathParts[pathParts.length - 1]
 
-  if (!responseId) {
-    ws.close()
+  console.log("[WS] Parsed path:", pathParts)
+
+  // Conversation WebSocket: /ws/conversation/:sessionId
+  if (pathParts[0] === "ws" && pathParts[1] === "conversation" && pathParts[2]) {
+    const sessionId = pathParts[2]
+    console.log("[WS] Conversation session:", sessionId)
+    
+    ws.on("message", (data) => {
+      try {
+        const msg = JSON.parse(data.toString());
+        
+        if (msg.type === "session_init") {
+          initRealtimeSTT(sessionId, ws);
+          // Auto-start conversation after STT is initialized
+          handleConversationMessage(ws, sessionId, Buffer.from(JSON.stringify({ 
+            type: "start", 
+            surveyId: msg.surveyId 
+          })));
+        } else if (msg.type === "audio_chunk") {
+          const pcm = Buffer.from(msg.data, "base64");
+          handleAudioChunk(sessionId, pcm);
+        } else if (msg.type === "session_end") {
+          cleanupSession(sessionId);
+        } else {
+          handleConversationMessage(ws, sessionId, data as Buffer);
+        }
+      } catch {
+        ws.send(JSON.stringify({ type: "error", message: "Invalid JSON" }));
+      }
+    });
+    
+    ws.on("close", () => cleanupSession(sessionId))
+    ws.send(JSON.stringify({ type: "status", status: "connected" }))
     return
   }
 
-  if (!responseClients.has(responseId)) {
-    responseClients.set(responseId, new Set())
+  // Admin survey creation WebSocket: /ws/survey-creation/:sessionId/:orgId
+  if (pathParts[0] === "ws" && pathParts[1] === "survey-creation" && pathParts[2] && pathParts[3]) {
+    const sessionId = pathParts[2]
+    const orgId = pathParts[3]
+    console.log("[WS] Admin session:", sessionId, "orgId:", orgId)
+    ws.on("message", (data) => handleAdminMessage(ws, sessionId, orgId, data as Buffer))
+    ws.on("close", () => cleanupAdminSession(sessionId))
+    ws.send(JSON.stringify({ type: "status", status: "connected" }))
+    return
   }
-  responseClients.get(responseId)!.add(ws)
 
-  ws.on("close", () => {
-    responseClients.get(responseId)?.delete(ws)
-    if (responseClients.get(responseId)?.size === 0) {
-      responseClients.delete(responseId)
-    }
-  })
+  console.log("[WS] No match for path:", pathParts, "— closing")
+  ws.close()
 })
 
 start().then(() => {
   httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`listening on 0.0.0.0:${PORT}`)
+    console.log(`WebSocket server ready on ws://localhost:${PORT}`)
   })
 })
 
