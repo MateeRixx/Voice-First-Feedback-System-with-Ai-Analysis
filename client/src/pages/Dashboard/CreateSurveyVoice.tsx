@@ -16,7 +16,6 @@ import {
   ExternalLink,
   AlertCircle,
   Loader2,
-  Globe,
 } from "lucide-react";
 import { toast } from "@/components/ui/toast";
 
